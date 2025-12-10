@@ -36,8 +36,17 @@ export interface Restaurant {
   category?: Category;
   food_types?: FoodType[];
   avg_rating?: AvgRating;
+  distance?: number; // Distance in km from search location
   created_at: string;
   updated_at: string;
+}
+
+export interface RestaurantFilters {
+  category_id?: number;
+  food_type_ids?: number[];
+  lat?: number;
+  lng?: number;
+  radius?: number; // in km
 }
 
 export interface CreateRestaurantData {
@@ -124,7 +133,22 @@ export const deleteFoodType = (id: number) =>
   fetchApi<void>(`/food-types/${id}`, { method: 'DELETE' });
 
 // Restaurants
-export const getRestaurants = () => fetchApi<Restaurant[]>('/restaurants');
+export const getRestaurants = (filters?: RestaurantFilters) => {
+  const params = new URLSearchParams();
+  if (filters?.category_id) {
+    params.set('category_id', filters.category_id.toString());
+  }
+  if (filters?.food_type_ids && filters.food_type_ids.length > 0) {
+    params.set('food_type_ids', filters.food_type_ids.join(','));
+  }
+  if (filters?.lat !== undefined && filters?.lng !== undefined && filters?.radius !== undefined) {
+    params.set('lat', filters.lat.toString());
+    params.set('lng', filters.lng.toString());
+    params.set('radius', filters.radius.toString());
+  }
+  const queryString = params.toString();
+  return fetchApi<Restaurant[]>(`/restaurants${queryString ? `?${queryString}` : ''}`);
+};
 export const getRestaurant = (id: number) => fetchApi<Restaurant>(`/restaurants/${id}`);
 export const createRestaurant = (data: CreateRestaurantData) =>
   fetchApi<Restaurant>('/restaurants', {
@@ -161,3 +185,5 @@ export const searchPlaces = (query: string) =>
   fetchApi<GooglePlaceResult[]>(`/places/search?q=${encodeURIComponent(query)}`);
 export const getPlaceDetails = (placeId: string) =>
   fetchApi<GooglePlaceResult>(`/places/${placeId}`);
+export const geocodeCities = (query: string) =>
+  fetchApi<GooglePlaceResult[]>(`/geocode/cities?q=${encodeURIComponent(query)}`);

@@ -3,8 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/fooder/backend/internal/database"
 	"github.com/fooder/backend/internal/models"
@@ -56,7 +58,89 @@ func setFoodTypesForRestaurant(ctx context.Context, restaurantID int, foodTypeID
 
 func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	query := `
+
+	// Parse query parameters for filtering
+	queryParams := r.URL.Query()
+	categoryID := queryParams.Get("category_id")
+	foodTypeIDs := queryParams.Get("food_type_ids") // comma-separated
+	lat := queryParams.Get("lat")
+	lng := queryParams.Get("lng")
+	radius := queryParams.Get("radius") // in kilometers
+
+	// Build dynamic query with filters
+	var conditions []string
+	var args []interface{}
+	argIndex := 1
+
+	// Category filter
+	if categoryID != "" {
+		if catID, err := strconv.Atoi(categoryID); err == nil {
+			conditions = append(conditions, fmt.Sprintf("r.category_id = $%d", argIndex))
+			args = append(args, catID)
+			argIndex++
+		}
+	}
+
+	// Food types filter (restaurants that have ANY of the specified food types)
+	if foodTypeIDs != "" {
+		ftIDs := strings.Split(foodTypeIDs, ",")
+		var validIDs []int
+		for _, idStr := range ftIDs {
+			if id, err := strconv.Atoi(strings.TrimSpace(idStr)); err == nil {
+				validIDs = append(validIDs, id)
+			}
+		}
+		if len(validIDs) > 0 {
+			placeholders := make([]string, len(validIDs))
+			for i, id := range validIDs {
+				placeholders[i] = fmt.Sprintf("$%d", argIndex)
+				args = append(args, id)
+				argIndex++
+			}
+			conditions = append(conditions, fmt.Sprintf(`r.id IN (
+				SELECT DISTINCT restaurant_id FROM restaurant_food_types
+				WHERE food_type_id IN (%s)
+			)`, strings.Join(placeholders, ",")))
+		}
+	}
+
+	// Location/radius filter using Haversine formula
+	var distanceSelect string
+	var distanceOrder string
+	if lat != "" && lng != "" && radius != "" {
+		latVal, latErr := strconv.ParseFloat(lat, 64)
+		lngVal, lngErr := strconv.ParseFloat(lng, 64)
+		radiusVal, radErr := strconv.ParseFloat(radius, 64)
+
+		if latErr == nil && lngErr == nil && radErr == nil {
+			// Haversine formula for distance in km
+			distanceSelect = fmt.Sprintf(`,
+				(6371 * acos(
+					cos(radians($%d)) * cos(radians(r.latitude)) *
+					cos(radians(r.longitude) - radians($%d)) +
+					sin(radians($%d)) * sin(radians(r.latitude))
+				)) as distance`, argIndex, argIndex+1, argIndex+2)
+			args = append(args, latVal, lngVal, latVal)
+
+			conditions = append(conditions, fmt.Sprintf(`r.latitude IS NOT NULL AND r.longitude IS NOT NULL AND
+				(6371 * acos(
+					cos(radians($%d)) * cos(radians(r.latitude)) *
+					cos(radians(r.longitude) - radians($%d)) +
+					sin(radians($%d)) * sin(radians(r.latitude))
+				)) <= $%d`, argIndex+3, argIndex+4, argIndex+5, argIndex+6))
+			args = append(args, latVal, lngVal, latVal, radiusVal)
+			argIndex += 7
+
+			distanceOrder = "distance ASC,"
+		}
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query := fmt.Sprintf(`
 		SELECT
 			r.id, r.name, r.description, r.address, r.phone, r.website, r.latitude, r.longitude,
 			r.google_place_id, r.category_id, r.created_at, r.updated_at,
@@ -65,20 +149,23 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 			COALESCE(AVG(rt.service_rating), 0) as avg_service,
 			COALESCE(AVG(rt.ambiance_rating), 0) as avg_ambiance,
 			COUNT(rt.id) as rating_count
+			%s
 		FROM restaurants r
 		LEFT JOIN categories c ON r.category_id = c.id
 		LEFT JOIN ratings rt ON r.id = rt.restaurant_id
+		%s
 		GROUP BY r.id, c.id
-		ORDER BY r.created_at DESC
-	`
+		ORDER BY %s r.created_at DESC
+	`, distanceSelect, whereClause, distanceOrder)
 
-	rows, err := database.GetPool().Query(ctx, query)
+	rows, err := database.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
+	hasDistance := distanceSelect != ""
 	restaurants := []models.Restaurant{}
 	for rows.Next() {
 		var rest models.Restaurant
@@ -86,15 +173,32 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 		var catName *string
 		var avgFood, avgService, avgAmbiance float64
 		var ratingCount int
+		var distance *float64
 
-		if err := rows.Scan(
-			&rest.ID, &rest.Name, &rest.Description, &rest.Address, &rest.Phone, &rest.Website, &rest.Latitude, &rest.Longitude,
-			&rest.GooglePlaceID, &rest.CategoryID, &rest.CreatedAt, &rest.UpdatedAt,
-			&catID, &catName,
-			&avgFood, &avgService, &avgAmbiance, &ratingCount,
-		); err != nil {
+		var err error
+		if hasDistance {
+			err = rows.Scan(
+				&rest.ID, &rest.Name, &rest.Description, &rest.Address, &rest.Phone, &rest.Website, &rest.Latitude, &rest.Longitude,
+				&rest.GooglePlaceID, &rest.CategoryID, &rest.CreatedAt, &rest.UpdatedAt,
+				&catID, &catName,
+				&avgFood, &avgService, &avgAmbiance, &ratingCount,
+				&distance,
+			)
+		} else {
+			err = rows.Scan(
+				&rest.ID, &rest.Name, &rest.Description, &rest.Address, &rest.Phone, &rest.Website, &rest.Latitude, &rest.Longitude,
+				&rest.GooglePlaceID, &rest.CategoryID, &rest.CreatedAt, &rest.UpdatedAt,
+				&catID, &catName,
+				&avgFood, &avgService, &avgAmbiance, &ratingCount,
+			)
+		}
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if distance != nil {
+			rest.Distance = distance
 		}
 
 		if catID != nil && catName != nil {

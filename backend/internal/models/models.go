@@ -30,6 +30,7 @@ type Restaurant struct {
 	Category      *Category  `json:"category,omitempty"`
 	FoodTypes     []FoodType `json:"food_types,omitempty"`
 	AvgRating     *AvgRating `json:"avg_rating,omitempty"`
+	Distance      *float64   `json:"distance,omitempty"` // Distance in km from search location
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }

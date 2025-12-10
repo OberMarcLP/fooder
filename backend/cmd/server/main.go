@@ -53,6 +53,7 @@ func main() {
 	// Google Maps
 	api.HandleFunc("/places/search", handlers.SearchPlaces).Methods("GET")
 	api.HandleFunc("/places/{placeId}", handlers.GetPlaceDetails).Methods("GET")
+	api.HandleFunc("/geocode/cities", handlers.GeocodeCities).Methods("GET")
 
 	// Health check
 	api.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

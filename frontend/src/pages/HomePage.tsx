@@ -1,31 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
-import { Restaurant, CreateRestaurantData, getRestaurants, createRestaurant, updateRestaurant, deleteRestaurant } from '../services/api';
+import { Restaurant, Category, FoodType, CreateRestaurantData, RestaurantFilters, getRestaurants, getCategories, getFoodTypes, createRestaurant, updateRestaurant, deleteRestaurant } from '../services/api';
 import { RestaurantCard } from '../components/RestaurantCard';
 import { RestaurantForm } from '../components/RestaurantForm';
+import { SearchFilters } from '../components/SearchFilters';
 import { Modal } from '../components/Modal';
 import { RestaurantDetail } from './RestaurantDetail';
 
 export function HomePage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [foodTypes, setFoodTypes] = useState<FoodType[]>([]);
+  const [filters, setFilters] = useState<RestaurantFilters>({});
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
 
-  const fetchRestaurants = async () => {
+  const fetchRestaurants = useCallback(async () => {
     try {
-      const data = await getRestaurants();
+      const data = await getRestaurants(filters);
       setRestaurants(data);
     } catch (error) {
       console.error('Failed to fetch restaurants:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     fetchRestaurants();
+  }, [fetchRestaurants]);
+
+  useEffect(() => {
+    const loadFiltersData = async () => {
+      try {
+        const [cats, fts] = await Promise.all([getCategories(), getFoodTypes()]);
+        setCategories(cats);
+        setFoodTypes(fts);
+      } catch (error) {
+        console.error('Failed to load filter data:', error);
+      }
+    };
+    loadFiltersData();
   }, []);
 
   const handleCreate = async (data: CreateRestaurantData) => {
@@ -78,12 +95,27 @@ export function HomePage() {
         </button>
       </div>
 
-      {restaurants.length === 0 ? (
+      <SearchFilters
+        categories={categories}
+        foodTypes={foodTypes}
+        filters={filters}
+        onFiltersChange={setFilters}
+      />
+
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      ) : restaurants.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400 mb-4">No restaurants yet.</p>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary">
-            Add your first restaurant
-          </button>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            {Object.keys(filters).length > 0 ? 'No restaurants match your filters.' : 'No restaurants yet.'}
+          </p>
+          {Object.keys(filters).length === 0 && (
+            <button onClick={() => setShowAddModal(true)} className="btn btn-primary">
+              Add your first restaurant
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

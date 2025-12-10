@@ -36,10 +36,17 @@ export function RestaurantCard({ restaurant, onClick }: RestaurantCardProps) {
         ))}
       </div>
 
-      {restaurant.address && (
+      {(restaurant.address || restaurant.distance !== undefined) && (
         <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
           <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span className="line-clamp-2">{restaurant.address}</span>
+          <div className="flex-1">
+            {restaurant.address && <span className="line-clamp-2">{restaurant.address}</span>}
+            {restaurant.distance !== undefined && (
+              <span className="text-blue-500 font-medium">
+                {restaurant.address ? ' · ' : ''}{restaurant.distance.toFixed(1)} km away
+              </span>
+            )}
+          </div>
         </div>
       )}
 
