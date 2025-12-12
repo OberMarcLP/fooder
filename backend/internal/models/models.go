@@ -105,3 +105,62 @@ type GooglePlaceResult struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
+
+// Restaurant Suggestion System
+type RestaurantSuggestion struct {
+	ID                  int        `json:"id"`
+	Name                string     `json:"name"`
+	Address             *string    `json:"address"`
+	Phone               *string    `json:"phone"`
+	Website             *string    `json:"website"`
+	Latitude            *float64   `json:"latitude"`
+	Longitude           *float64   `json:"longitude"`
+	GooglePlaceID       *string    `json:"google_place_id"`
+	SuggestedCategoryID *int       `json:"suggested_category_id"`
+	Category            *Category  `json:"category,omitempty"`
+	FoodTypes           []FoodType `json:"food_types,omitempty"`
+	Notes               *string    `json:"notes"`
+	Status              string     `json:"status"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+}
+
+type CreateSuggestionRequest struct {
+	Name                string   `json:"name"`
+	Address             *string  `json:"address"`
+	Phone               *string  `json:"phone"`
+	Website             *string  `json:"website"`
+	Latitude            *float64 `json:"latitude"`
+	Longitude           *float64 `json:"longitude"`
+	GooglePlaceID       *string  `json:"google_place_id"`
+	SuggestedCategoryID *int     `json:"suggested_category_id"`
+	FoodTypeIDs         []int    `json:"food_type_ids"`
+	Notes               *string  `json:"notes"`
+}
+
+type UpdateSuggestionStatusRequest struct {
+	Status string `json:"status"`
+}
+
+type ConvertSuggestionRequest struct {
+	Description *string `json:"description"`
+	CategoryID  *int    `json:"category_id"`
+}
+
+// Menu Photos
+type MenuPhoto struct {
+	ID               int       `json:"id"`
+	RestaurantID     int       `json:"restaurant_id"`
+	Filename         string    `json:"filename"`
+	OriginalFilename *string   `json:"original_filename"`
+	Caption          string    `json:"caption"`
+	FileSize         *int      `json:"file_size"`
+	MimeType         *string   `json:"mime_type"`
+	URL              string    `json:"url"` // Computed field
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type UploadPhotoResponse struct {
+	Photo MenuPhoto `json:"photo"`
+}

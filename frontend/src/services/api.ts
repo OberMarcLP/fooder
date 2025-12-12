@@ -187,3 +187,103 @@ export const getPlaceDetails = (placeId: string) =>
   fetchApi<GooglePlaceResult>(`/places/${placeId}`);
 export const geocodeCities = (query: string) =>
   fetchApi<GooglePlaceResult[]>(`/geocode/cities?q=${encodeURIComponent(query)}`);
+
+// Restaurant Suggestions
+export interface RestaurantSuggestion {
+  id: number;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  website: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  google_place_id: string | null;
+  suggested_category_id: number | null;
+  category?: Category;
+  food_types?: FoodType[];
+  notes: string | null;
+  status: 'pending' | 'approved' | 'tested' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSuggestionData {
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  google_place_id?: string | null;
+  suggested_category_id?: number | null;
+  food_type_ids?: number[];
+  notes?: string | null;
+}
+
+export const getSuggestions = (status?: string) => {
+  const queryString = status ? `?status=${status}` : '';
+  return fetchApi<RestaurantSuggestion[]>(`/suggestions${queryString}`);
+};
+export const getSuggestion = (id: number) =>
+  fetchApi<RestaurantSuggestion>(`/suggestions/${id}`);
+export const createSuggestion = (data: CreateSuggestionData) =>
+  fetchApi<RestaurantSuggestion>('/suggestions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+export const updateSuggestionStatus = (id: number, status: string) =>
+  fetchApi<RestaurantSuggestion>(`/suggestions/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+export const convertSuggestion = (id: number, data: { description?: string; category_id?: number }) =>
+  fetchApi<{ restaurant_id: number; message: string }>(`/suggestions/${id}/convert`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+export const deleteSuggestion = (id: number) =>
+  fetchApi<void>(`/suggestions/${id}`, { method: 'DELETE' });
+
+// Menu Photos
+export interface MenuPhoto {
+  id: number;
+  restaurant_id: number;
+  filename: string;
+  original_filename: string | null;
+  caption: string;
+  file_size: number | null;
+  mime_type: string | null;
+  url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getMenuPhotos = (restaurantId: number) =>
+  fetchApi<MenuPhoto[]>(`/restaurants/${restaurantId}/photos`);
+
+export const uploadMenuPhoto = async (restaurantId: number, photo: File, caption: string): Promise<{ photo: MenuPhoto }> => {
+  const formData = new FormData();
+  formData.append('photo', photo);
+  formData.append('caption', caption);
+
+  const response = await fetch(`${API_URL}/api/restaurants/${restaurantId}/photos`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || 'Failed to upload photo');
+  }
+
+  return response.json();
+};
+
+export const updatePhotoCaption = (id: number, caption: string) =>
+  fetchApi<MenuPhoto>(`/photos/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ caption }),
+  });
+
+export const deleteMenuPhoto = (id: number) =>
+  fetchApi<void>(`/photos/${id}`, { method: 'DELETE' });

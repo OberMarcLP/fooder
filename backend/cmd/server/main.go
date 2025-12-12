@@ -21,6 +21,12 @@ func main() {
 	// Create router
 	r := mux.NewRouter()
 
+	// Create uploads directory and serve static files
+	uploadsDir := "./uploads"
+	os.MkdirAll(uploadsDir+"/menu_photos", 0755)
+	r.PathPrefix("/api/uploads/").Handler(
+		http.StripPrefix("/api/uploads/", http.FileServer(http.Dir(uploadsDir))))
+
 	// API routes
 	api := r.PathPrefix("/api").Subrouter()
 
@@ -54,6 +60,20 @@ func main() {
 	api.HandleFunc("/places/search", handlers.SearchPlaces).Methods("GET")
 	api.HandleFunc("/places/{placeId}", handlers.GetPlaceDetails).Methods("GET")
 	api.HandleFunc("/geocode/cities", handlers.GeocodeCities).Methods("GET")
+
+	// Restaurant Suggestions
+	api.HandleFunc("/suggestions", handlers.GetSuggestions).Methods("GET")
+	api.HandleFunc("/suggestions/{id}", handlers.GetSuggestion).Methods("GET")
+	api.HandleFunc("/suggestions", handlers.CreateSuggestion).Methods("POST")
+	api.HandleFunc("/suggestions/{id}/status", handlers.UpdateSuggestionStatus).Methods("PATCH")
+	api.HandleFunc("/suggestions/{id}/convert", handlers.ConvertSuggestion).Methods("POST")
+	api.HandleFunc("/suggestions/{id}", handlers.DeleteSuggestion).Methods("DELETE")
+
+	// Menu Photos
+	api.HandleFunc("/restaurants/{restaurantId}/photos", handlers.GetMenuPhotos).Methods("GET")
+	api.HandleFunc("/restaurants/{restaurantId}/photos", handlers.UploadMenuPhoto).Methods("POST")
+	api.HandleFunc("/photos/{id}", handlers.UpdatePhotoCaption).Methods("PATCH")
+	api.HandleFunc("/photos/{id}", handlers.DeleteMenuPhoto).Methods("DELETE")
 
 	// Health check
 	api.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
