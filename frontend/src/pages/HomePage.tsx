@@ -1,21 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Loader2 } from 'lucide-react';
-import { Restaurant, Category, FoodType, CreateRestaurantData, RestaurantFilters, getRestaurants, getCategories, getFoodTypes, createRestaurant, updateRestaurant, deleteRestaurant } from '../services/api';
+import { Restaurant, CreateRestaurantData, CreateSuggestionData, RestaurantFilters, getRestaurants, createSuggestion, updateRestaurant, deleteRestaurant, getRestaurant, convertSuggestion, deleteSuggestion } from '../services/api';
 import { RestaurantCard } from '../components/RestaurantCard';
 import { RestaurantForm } from '../components/RestaurantForm';
-import { SearchFilters } from '../components/SearchFilters';
+import { SuggestionForm } from '../components/SuggestionForm';
+import { ReviewConvertModal } from '../components/ReviewConvertModal';
 import { Modal } from '../components/Modal';
 import { RestaurantDetail } from './RestaurantDetail';
 
-export function HomePage() {
+interface HomePageProps {
+  filters: RestaurantFilters;
+}
+
+export function HomePage({ filters }: HomePageProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [foodTypes, setFoodTypes] = useState<FoodType[]>([]);
-  const [filters, setFilters] = useState<RestaurantFilters>({});
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddSuggestionModal, setShowAddSuggestionModal] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
+  const [reviewingSuggestion, setReviewingSuggestion] = useState<Restaurant | null>(null);
 
   const fetchRestaurants = useCallback(async () => {
     try {
@@ -32,26 +38,32 @@ export function HomePage() {
     fetchRestaurants();
   }, [fetchRestaurants]);
 
+  // Handle restaurant selection from global search
   useEffect(() => {
-    const loadFiltersData = async () => {
-      try {
-        const [cats, fts] = await Promise.all([getCategories(), getFoodTypes()]);
-        setCategories(cats);
-        setFoodTypes(fts);
-      } catch (error) {
-        console.error('Failed to load filter data:', error);
-      }
-    };
-    loadFiltersData();
-  }, []);
+    const state = location.state as { restaurantId?: number } | null;
+    if (state?.restaurantId) {
+      const restaurantId = state.restaurantId;
+      const fetchSelectedRestaurant = async () => {
+        try {
+          const restaurant = await getRestaurant(restaurantId);
+          setSelectedRestaurant(restaurant);
+          // Clear the location state
+          navigate(location.pathname, { replace: true });
+        } catch (error) {
+          console.error('Failed to fetch restaurant:', error);
+        }
+      };
+      fetchSelectedRestaurant();
+    }
+  }, [location, navigate]);
 
-  const handleCreate = async (data: CreateRestaurantData) => {
+  const handleCreateSuggestion = async (data: CreateSuggestionData) => {
     try {
-      await createRestaurant(data);
-      setShowAddModal(false);
+      await createSuggestion(data);
+      setShowAddSuggestionModal(false);
       fetchRestaurants();
     } catch (error) {
-      console.error('Failed to create restaurant:', error);
+      console.error('Failed to create suggestion:', error);
     }
   };
 
@@ -77,6 +89,46 @@ export function HomePage() {
     }
   };
 
+  const handleReviewSuggestion = (restaurant: Restaurant) => {
+    setReviewingSuggestion(restaurant);
+  };
+
+  const handleRejectSuggestion = async (restaurant: Restaurant) => {
+    if (!confirm(`Are you sure you want to reject "${restaurant.name}"?`)) return;
+    try {
+      if (restaurant.suggestion_id) {
+        await deleteSuggestion(restaurant.suggestion_id);
+        fetchRestaurants();
+      }
+    } catch (error) {
+      console.error('Failed to reject suggestion:', error);
+    }
+  };
+
+  const handleConvertSuggestion = async (data: {
+    foodRating: number;
+    serviceRating: number;
+    ambianceRating: number;
+    comment: string;
+    description: string;
+  }) => {
+    if (!reviewingSuggestion?.suggestion_id) return;
+    try {
+      await convertSuggestion(reviewingSuggestion.suggestion_id, {
+        description: data.description || undefined,
+        category_id: reviewingSuggestion.category?.id || undefined,
+        food_rating: data.foodRating,
+        service_rating: data.serviceRating,
+        ambiance_rating: data.ambianceRating,
+        comment: data.comment || undefined,
+      });
+      setReviewingSuggestion(null);
+      fetchRestaurants();
+    } catch (error) {
+      console.error('Failed to convert suggestion:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -89,18 +141,11 @@ export function HomePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Restaurants</h1>
-        <button onClick={() => setShowAddModal(true)} className="btn btn-primary flex items-center gap-2">
+        <button onClick={() => setShowAddSuggestionModal(true)} className="btn btn-primary flex items-center gap-2">
           <Plus className="w-5 h-5" />
-          Add Restaurant
+          Add Suggestion
         </button>
       </div>
-
-      <SearchFilters
-        categories={categories}
-        foodTypes={foodTypes}
-        filters={filters}
-        onFiltersChange={setFilters}
-      />
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -112,8 +157,8 @@ export function HomePage() {
             {Object.keys(filters).length > 0 ? 'No restaurants match your filters.' : 'No restaurants yet.'}
           </p>
           {Object.keys(filters).length === 0 && (
-            <button onClick={() => setShowAddModal(true)} className="btn btn-primary">
-              Add your first restaurant
+            <button onClick={() => setShowAddSuggestionModal(true)} className="btn btn-primary">
+              Add your first suggestion
             </button>
           )}
         </div>
@@ -124,13 +169,15 @@ export function HomePage() {
               key={restaurant.id}
               restaurant={restaurant}
               onClick={() => setSelectedRestaurant(restaurant)}
+              onReview={handleReviewSuggestion}
+              onReject={handleRejectSuggestion}
             />
           ))}
         </div>
       )}
 
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Restaurant">
-        <RestaurantForm onSubmit={handleCreate} onCancel={() => setShowAddModal(false)} />
+      <Modal isOpen={showAddSuggestionModal} onClose={() => setShowAddSuggestionModal(false)} title="Add Suggestion">
+        <SuggestionForm onSubmit={handleCreateSuggestion} onCancel={() => setShowAddSuggestionModal(false)} />
       </Modal>
 
       <Modal
@@ -164,6 +211,15 @@ export function HomePage() {
           />
         )}
       </Modal>
+
+      {reviewingSuggestion && (
+        <ReviewConvertModal
+          isOpen={true}
+          onClose={() => setReviewingSuggestion(null)}
+          onSubmit={handleConvertSuggestion}
+          restaurantName={reviewingSuggestion.name}
+        />
+      )}
     </div>
   );
 }
