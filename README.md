@@ -17,6 +17,9 @@ A full-stack restaurant rating application with Google Maps integration.
 - Manage food types (Pizza, Sushi, etc.)
 - View restaurant locations on embedded map
 - Get directions to restaurants
+- Restaurant suggestion system (pending, approved, tested, rejected statuses)
+- Include suggested restaurants in search results
+- Upload menu photos (supports AWS S3 or local storage)
 - Dark/Light theme toggle
 
 ## Quick Start
@@ -38,6 +41,12 @@ cp .env.example .env
 
 ```
 GOOGLE_MAPS_API_KEY=your_api_key_here
+
+# Optional: Configure AWS S3 for photo storage (otherwise uses local storage)
+# AWS_ACCESS_KEY_ID=your_aws_access_key_id
+# AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+# AWS_REGION=us-east-1
+# S3_BUCKET_NAME=your-bucket-name
 ```
 
 3. Start all services:

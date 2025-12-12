@@ -52,3 +52,11 @@ cd frontend && npm install && npm run dev
 
 Required in `.env` file (see `.env.example`):
 - `GOOGLE_MAPS_API_KEY` - needs Places API enabled in Google Cloud Console
+
+Optional (for S3 storage):
+- `AWS_ACCESS_KEY_ID` - AWS access key for S3
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key for S3
+- `AWS_REGION` - AWS region (e.g., us-east-1)
+- `S3_BUCKET_NAME` - S3 bucket name for storing photos
+
+**Note**: If AWS credentials are not provided, the app will fall back to local file storage in `./uploads/menu_photos/`

@@ -31,6 +31,9 @@ type Restaurant struct {
 	FoodTypes     []FoodType `json:"food_types,omitempty"`
 	AvgRating     *AvgRating `json:"avg_rating,omitempty"`
 	Distance      *float64   `json:"distance,omitempty"` // Distance in km from search location
+	IsSuggestion  bool       `json:"is_suggestion"`      // Indicates if this is from suggestions table
+	SuggestionID  *int       `json:"suggestion_id,omitempty"`
+	Status        *string    `json:"status,omitempty"` // For suggestions: pending, approved, tested, rejected
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
@@ -143,8 +146,12 @@ type UpdateSuggestionStatusRequest struct {
 }
 
 type ConvertSuggestionRequest struct {
-	Description *string `json:"description"`
-	CategoryID  *int    `json:"category_id"`
+	Description    *string `json:"description"`
+	CategoryID     *int    `json:"category_id"`
+	FoodRating     int     `json:"food_rating"`
+	ServiceRating  int     `json:"service_rating"`
+	AmbianceRating int     `json:"ambiance_rating"`
+	Comment        *string `json:"comment"`
 }
 
 // Menu Photos

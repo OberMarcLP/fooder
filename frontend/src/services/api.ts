@@ -37,6 +37,9 @@ export interface Restaurant {
   food_types?: FoodType[];
   avg_rating?: AvgRating;
   distance?: number; // Distance in km from search location
+  is_suggestion: boolean; // Indicates if this is from suggestions table
+  suggestion_id?: number;
+  status?: 'pending' | 'approved' | 'tested' | 'rejected'; // For suggestions
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +50,7 @@ export interface RestaurantFilters {
   lat?: number;
   lng?: number;
   radius?: number; // in km
+  include_suggestions?: boolean;
 }
 
 export interface CreateRestaurantData {
@@ -146,6 +150,9 @@ export const getRestaurants = (filters?: RestaurantFilters) => {
     params.set('lng', filters.lng.toString());
     params.set('radius', filters.radius.toString());
   }
+  if (filters?.include_suggestions) {
+    params.set('include_suggestions', 'true');
+  }
   const queryString = params.toString();
   return fetchApi<Restaurant[]>(`/restaurants${queryString ? `?${queryString}` : ''}`);
 };
@@ -236,13 +243,24 @@ export const updateSuggestionStatus = (id: number, status: string) =>
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
-export const convertSuggestion = (id: number, data: { description?: string; category_id?: number }) =>
+export const convertSuggestion = (id: number, data: {
+  description?: string;
+  category_id?: number;
+  food_rating: number;
+  service_rating: number;
+  ambiance_rating: number;
+  comment?: string;
+}) =>
   fetchApi<{ restaurant_id: number; message: string }>(`/suggestions/${id}/convert`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
 export const deleteSuggestion = (id: number) =>
   fetchApi<void>(`/suggestions/${id}`, { method: 'DELETE' });
+
+// Global Search
+export const globalSearch = (query: string) =>
+  fetchApi<Restaurant[]>(`/search?q=${encodeURIComponent(query)}`);
 
 // Menu Photos
 export interface MenuPhoto {
