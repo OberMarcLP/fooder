@@ -36,6 +36,29 @@ func getFoodTypesForRestaurant(ctx context.Context, restaurantID int) ([]models.
 	return foodTypes, nil
 }
 
+func getFoodTypesForSuggestion(ctx context.Context, suggestionID int) ([]models.FoodType, error) {
+	rows, err := database.GetPool().Query(ctx,
+		`SELECT ft.id, ft.name, ft.created_at, ft.updated_at
+		FROM food_types ft
+		JOIN suggestion_food_types sft ON ft.id = sft.food_type_id
+		WHERE sft.suggestion_id = $1
+		ORDER BY ft.name`, suggestionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var foodTypes []models.FoodType
+	for rows.Next() {
+		var ft models.FoodType
+		if err := rows.Scan(&ft.ID, &ft.Name, &ft.CreatedAt, &ft.UpdatedAt); err != nil {
+			return nil, err
+		}
+		foodTypes = append(foodTypes, ft)
+	}
+	return foodTypes, nil
+}
+
 func setFoodTypesForRestaurant(ctx context.Context, restaurantID int, foodTypeIDs []int) error {
 	// Delete existing food types
 	_, err := database.GetPool().Exec(ctx,
@@ -67,21 +90,25 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 	lng := queryParams.Get("lng")
 	radius := queryParams.Get("radius") // in kilometers
 
-	// Build dynamic query with filters
-	var conditions []string
-	var args []interface{}
-	argIndex := 1
+	// Always include suggestions in the restaurant list
+	includeSuggestions := true
 
-	// Category filter
+	// Build dynamic query with filters using UNION to include both restaurants and suggestions
+	var args []interface{}
+
+	// Build restaurant query
+	var restaurantConditions []string
+	var restaurantArgs []interface{}
+	restaurantArgIndex := 1
+
 	if categoryID != "" {
 		if catID, err := strconv.Atoi(categoryID); err == nil {
-			conditions = append(conditions, fmt.Sprintf("r.category_id = $%d", argIndex))
-			args = append(args, catID)
-			argIndex++
+			restaurantConditions = append(restaurantConditions, fmt.Sprintf("r.category_id = $%d", restaurantArgIndex))
+			restaurantArgs = append(restaurantArgs, catID)
+			restaurantArgIndex++
 		}
 	}
 
-	// Food types filter (restaurants that have ANY of the specified food types)
 	if foodTypeIDs != "" {
 		ftIDs := strings.Split(foodTypeIDs, ",")
 		var validIDs []int
@@ -93,54 +120,56 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 		if len(validIDs) > 0 {
 			placeholders := make([]string, len(validIDs))
 			for i, id := range validIDs {
-				placeholders[i] = fmt.Sprintf("$%d", argIndex)
-				args = append(args, id)
-				argIndex++
+				placeholders[i] = fmt.Sprintf("$%d", restaurantArgIndex)
+				restaurantArgs = append(restaurantArgs, id)
+				restaurantArgIndex++
 			}
-			conditions = append(conditions, fmt.Sprintf(`r.id IN (
+			restaurantConditions = append(restaurantConditions, fmt.Sprintf(`r.id IN (
 				SELECT DISTINCT restaurant_id FROM restaurant_food_types
 				WHERE food_type_id IN (%s)
 			)`, strings.Join(placeholders, ",")))
 		}
 	}
 
-	// Location/radius filter using Haversine formula
+	// Location/radius filter
 	var distanceSelect string
 	var distanceOrder string
+	var hasDistance bool
+
 	if lat != "" && lng != "" && radius != "" {
 		latVal, latErr := strconv.ParseFloat(lat, 64)
 		lngVal, lngErr := strconv.ParseFloat(lng, 64)
 		radiusVal, radErr := strconv.ParseFloat(radius, 64)
 
 		if latErr == nil && lngErr == nil && radErr == nil {
-			// Haversine formula for distance in km
+			hasDistance = true
 			distanceSelect = fmt.Sprintf(`,
 				(6371 * acos(
 					cos(radians($%d)) * cos(radians(r.latitude)) *
 					cos(radians(r.longitude) - radians($%d)) +
 					sin(radians($%d)) * sin(radians(r.latitude))
-				)) as distance`, argIndex, argIndex+1, argIndex+2)
-			args = append(args, latVal, lngVal, latVal)
+				)) as distance`, restaurantArgIndex, restaurantArgIndex+1, restaurantArgIndex+2)
+			restaurantArgs = append(restaurantArgs, latVal, lngVal, latVal)
 
-			conditions = append(conditions, fmt.Sprintf(`r.latitude IS NOT NULL AND r.longitude IS NOT NULL AND
+			restaurantConditions = append(restaurantConditions, fmt.Sprintf(`r.latitude IS NOT NULL AND r.longitude IS NOT NULL AND
 				(6371 * acos(
 					cos(radians($%d)) * cos(radians(r.latitude)) *
 					cos(radians(r.longitude) - radians($%d)) +
 					sin(radians($%d)) * sin(radians(r.latitude))
-				)) <= $%d`, argIndex+3, argIndex+4, argIndex+5, argIndex+6))
-			args = append(args, latVal, lngVal, latVal, radiusVal)
-			argIndex += 7
+				)) <= $%d`, restaurantArgIndex+3, restaurantArgIndex+4, restaurantArgIndex+5, restaurantArgIndex+6))
+			restaurantArgs = append(restaurantArgs, latVal, lngVal, latVal, radiusVal)
+			restaurantArgIndex += 7
 
 			distanceOrder = "distance ASC,"
 		}
 	}
 
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	restaurantWhereClause := ""
+	if len(restaurantConditions) > 0 {
+		restaurantWhereClause = "WHERE " + strings.Join(restaurantConditions, " AND ")
 	}
 
-	query := fmt.Sprintf(`
+	restaurantQuery := fmt.Sprintf(`
 		SELECT
 			r.id, r.name, r.description, r.address, r.phone, r.website, r.latitude, r.longitude,
 			r.google_place_id, r.category_id, r.created_at, r.updated_at,
@@ -148,24 +177,128 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 			COALESCE(AVG(rt.food_rating), 0) as avg_food,
 			COALESCE(AVG(rt.service_rating), 0) as avg_service,
 			COALESCE(AVG(rt.ambiance_rating), 0) as avg_ambiance,
-			COUNT(rt.id) as rating_count
+			COUNT(rt.id) as rating_count,
+			false as is_suggestion,
+			NULL::integer as suggestion_id,
+			NULL::text as status
 			%s
 		FROM restaurants r
 		LEFT JOIN categories c ON r.category_id = c.id
 		LEFT JOIN ratings rt ON r.id = rt.restaurant_id
 		%s
 		GROUP BY r.id, c.id
-		ORDER BY %s r.created_at DESC
-	`, distanceSelect, whereClause, distanceOrder)
+	`, distanceSelect, restaurantWhereClause)
 
-	rows, err := database.GetPool().Query(ctx, query, args...)
+	args = restaurantArgs
+
+	// Build suggestion query if requested
+	var finalQuery string
+	if includeSuggestions {
+		// Build suggestion conditions similar to restaurant conditions
+		var suggestionConditions []string
+		suggestionArgIndex := len(args) + 1
+
+		if categoryID != "" {
+			if catID, err := strconv.Atoi(categoryID); err == nil {
+				suggestionConditions = append(suggestionConditions, fmt.Sprintf("s.suggested_category_id = $%d", suggestionArgIndex))
+				args = append(args, catID)
+				suggestionArgIndex++
+			}
+		}
+
+		if foodTypeIDs != "" {
+			ftIDs := strings.Split(foodTypeIDs, ",")
+			var validIDs []int
+			for _, idStr := range ftIDs {
+				if id, err := strconv.Atoi(strings.TrimSpace(idStr)); err == nil {
+					validIDs = append(validIDs, id)
+				}
+			}
+			if len(validIDs) > 0 {
+				placeholders := make([]string, len(validIDs))
+				for i, id := range validIDs {
+					placeholders[i] = fmt.Sprintf("$%d", suggestionArgIndex)
+					args = append(args, id)
+					suggestionArgIndex++
+				}
+				suggestionConditions = append(suggestionConditions, fmt.Sprintf(`s.id IN (
+					SELECT DISTINCT suggestion_id FROM suggestion_food_types
+					WHERE food_type_id IN (%s)
+				)`, strings.Join(placeholders, ",")))
+			}
+		}
+
+		// Add status filter to only show pending suggestions
+		suggestionConditions = append(suggestionConditions, "s.status = 'pending'")
+
+		var suggestionDistanceSelect string
+		if hasDistance {
+			latVal, _ := strconv.ParseFloat(lat, 64)
+			lngVal, _ := strconv.ParseFloat(lng, 64)
+			radiusVal, _ := strconv.ParseFloat(radius, 64)
+
+			suggestionDistanceSelect = fmt.Sprintf(`,
+				(6371 * acos(
+					cos(radians($%d)) * cos(radians(s.latitude)) *
+					cos(radians(s.longitude) - radians($%d)) +
+					sin(radians($%d)) * sin(radians(s.latitude))
+				)) as distance`, suggestionArgIndex, suggestionArgIndex+1, suggestionArgIndex+2)
+			args = append(args, latVal, lngVal, latVal)
+
+			suggestionConditions = append(suggestionConditions, fmt.Sprintf(`s.latitude IS NOT NULL AND s.longitude IS NOT NULL AND
+				(6371 * acos(
+					cos(radians($%d)) * cos(radians(s.latitude)) *
+					cos(radians(s.longitude) - radians($%d)) +
+					sin(radians($%d)) * sin(radians(s.latitude))
+				)) <= $%d`, suggestionArgIndex+3, suggestionArgIndex+4, suggestionArgIndex+5, suggestionArgIndex+6))
+			args = append(args, latVal, lngVal, latVal, radiusVal)
+		}
+
+		suggestionWhereClause := ""
+		if len(suggestionConditions) > 0 {
+			suggestionWhereClause = "WHERE " + strings.Join(suggestionConditions, " AND ")
+		}
+
+		suggestionQuery := fmt.Sprintf(`
+			SELECT
+				s.id, s.name, NULL::text as description, s.address, s.phone, s.website, s.latitude, s.longitude,
+				s.google_place_id, s.suggested_category_id as category_id, s.created_at, s.updated_at,
+				c.id, c.name,
+				0.0 as avg_food,
+				0.0 as avg_service,
+				0.0 as avg_ambiance,
+				0 as rating_count,
+				true as is_suggestion,
+				s.id as suggestion_id,
+				s.status
+				%s
+			FROM restaurant_suggestions s
+			LEFT JOIN categories c ON s.suggested_category_id = c.id
+			%s
+		`, suggestionDistanceSelect, suggestionWhereClause)
+
+		finalQuery = fmt.Sprintf(`
+			SELECT * FROM (
+				%s
+				UNION ALL
+				%s
+			) combined
+			ORDER BY %s created_at DESC
+		`, restaurantQuery, suggestionQuery, distanceOrder)
+	} else {
+		finalQuery = fmt.Sprintf(`
+			%s
+			ORDER BY %s r.created_at DESC
+		`, restaurantQuery, distanceOrder)
+	}
+
+	rows, err := database.GetPool().Query(ctx, finalQuery, args...)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	hasDistance := distanceSelect != ""
 	restaurants := []models.Restaurant{}
 	for rows.Next() {
 		var rest models.Restaurant
@@ -182,6 +315,7 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 				&rest.GooglePlaceID, &rest.CategoryID, &rest.CreatedAt, &rest.UpdatedAt,
 				&catID, &catName,
 				&avgFood, &avgService, &avgAmbiance, &ratingCount,
+				&rest.IsSuggestion, &rest.SuggestionID, &rest.Status,
 				&distance,
 			)
 		} else {
@@ -190,6 +324,7 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 				&rest.GooglePlaceID, &rest.CategoryID, &rest.CreatedAt, &rest.UpdatedAt,
 				&catID, &catName,
 				&avgFood, &avgService, &avgAmbiance, &ratingCount,
+				&rest.IsSuggestion, &rest.SuggestionID, &rest.Status,
 			)
 		}
 		if err != nil {
@@ -205,8 +340,13 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 			rest.Category = &models.Category{ID: *catID, Name: *catName}
 		}
 
-		// Get food types for this restaurant
-		foodTypes, err := getFoodTypesForRestaurant(ctx, rest.ID)
+		// Get food types for this restaurant or suggestion
+		var foodTypes []models.FoodType
+		if rest.IsSuggestion {
+			foodTypes, err = getFoodTypesForSuggestion(ctx, rest.ID)
+		} else {
+			foodTypes, err = getFoodTypesForRestaurant(ctx, rest.ID)
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -421,4 +561,125 @@ func DeleteRestaurant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GlobalSearch searches both restaurants and suggestions by name
+func GlobalSearch(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	searchPattern := "%" + strings.ToLower(query) + "%"
+
+	// Search restaurants
+	restaurantsQuery := `
+		SELECT DISTINCT
+			r.id, r.name, r.description, r.address, r.phone, r.website, r.latitude, r.longitude,
+			r.google_place_id, r.category_id, r.created_at, r.updated_at,
+			c.id, c.name,
+			COALESCE(AVG(rat.food_rating), 0) as avg_food,
+			COALESCE(AVG(rat.service_rating), 0) as avg_service,
+			COALESCE(AVG(rat.ambiance_rating), 0) as avg_ambiance,
+			COUNT(rat.id) as rating_count,
+			false as is_suggestion,
+			NULL::integer as suggestion_id,
+			NULL::text as status
+		FROM restaurants r
+		LEFT JOIN categories c ON r.category_id = c.id
+		LEFT JOIN ratings rat ON r.id = rat.restaurant_id
+		WHERE LOWER(r.name) LIKE $1
+		GROUP BY r.id, r.name, r.description, r.address, r.phone, r.website, r.latitude, r.longitude,
+			r.google_place_id, r.category_id, r.created_at, r.updated_at, c.id, c.name
+
+		UNION ALL
+
+		SELECT
+			NULL::integer, s.name, NULL::text, s.address, s.phone, s.website, s.latitude, s.longitude,
+			s.google_place_id, s.suggested_category_id, s.created_at, s.updated_at,
+			c.id, c.name,
+			0::float, 0::float, 0::float, 0::integer,
+			true as is_suggestion,
+			s.id as suggestion_id,
+			s.status
+		FROM restaurant_suggestions s
+		LEFT JOIN categories c ON s.suggested_category_id = c.id
+		WHERE LOWER(s.name) LIKE $1
+			AND s.status = 'pending'
+
+		ORDER BY 2
+		LIMIT 20
+	`
+
+	rows, err := database.GetPool().Query(ctx, restaurantsQuery, searchPattern)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	results := []models.Restaurant{}
+	for rows.Next() {
+		var rest models.Restaurant
+		var restaurantID *int
+		var catID *int
+		var catName *string
+		var avgFood, avgService, avgAmbiance float64
+		var ratingCount int
+		var isSuggestion bool
+		var suggestionID *int
+		var status *string
+
+		err := rows.Scan(
+			&restaurantID, &rest.Name, &rest.Description, &rest.Address, &rest.Phone, &rest.Website, &rest.Latitude, &rest.Longitude,
+			&rest.GooglePlaceID, &rest.CategoryID, &rest.CreatedAt, &rest.UpdatedAt,
+			&catID, &catName,
+			&avgFood, &avgService, &avgAmbiance, &ratingCount,
+			&isSuggestion, &suggestionID, &status,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Set restaurant ID if it's not null (i.e., it's a real restaurant, not a suggestion)
+		if restaurantID != nil {
+			rest.ID = *restaurantID
+		}
+
+		if catID != nil && catName != nil {
+			rest.Category = &models.Category{ID: *catID, Name: *catName}
+		}
+
+		rest.IsSuggestion = isSuggestion
+		rest.SuggestionID = suggestionID
+		rest.Status = status
+
+		// Get food types
+		if isSuggestion && suggestionID != nil {
+			foodTypes, _ := getFoodTypesForSuggestion(ctx, *suggestionID)
+			rest.FoodTypes = foodTypes
+		} else if rest.ID > 0 {
+			foodTypes, _ := getFoodTypesForRestaurant(ctx, rest.ID)
+			rest.FoodTypes = foodTypes
+		}
+
+		if ratingCount > 0 {
+			overall := (avgFood + avgService + avgAmbiance) / 3
+			rest.AvgRating = &models.AvgRating{
+				Food:     avgFood,
+				Service:  avgService,
+				Ambiance: avgAmbiance,
+				Overall:  overall,
+				Count:    ratingCount,
+			}
+		}
+
+		results = append(results, rest)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
 }
