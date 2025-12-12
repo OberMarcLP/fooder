@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Filter, MapPin, X, Loader2, Navigation } from 'lucide-react';
+import { MapPin, X, Loader2, Navigation } from 'lucide-react';
 import { Category, FoodType, RestaurantFilters, geocodeCities, GooglePlaceResult } from '../services/api';
 
 interface SearchFiltersProps {
@@ -10,7 +10,6 @@ interface SearchFiltersProps {
 }
 
 export function SearchFilters({ categories, foodTypes, filters, onFiltersChange }: SearchFiltersProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [locationResults, setLocationResults] = useState<GooglePlaceResult[]>([]);
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -129,31 +128,18 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
 
   return (
     <div className="card mb-6">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-blue-500 transition-colors"
-        >
-          <Filter className="w-5 h-5" />
-          <span className="font-medium">Filters</span>
-          {hasActiveFilters && (
-            <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
-              Active
-            </span>
-          )}
-        </button>
-        {hasActiveFilters && (
+      {hasActiveFilters && (
+        <div className="flex items-center justify-end mb-4">
           <button
             onClick={clearAllFilters}
             className="text-sm text-gray-500 hover:text-red-500 transition-colors"
           >
             Clear all
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {isExpanded && (
-        <div className="mt-4 space-y-4">
+      <div className="space-y-4">
           {/* Category Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -279,8 +265,7 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
               <p className="text-xs text-gray-500 mt-1">Select a location first to filter by radius</p>
             )}
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

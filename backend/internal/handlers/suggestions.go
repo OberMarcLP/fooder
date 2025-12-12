@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -12,29 +13,6 @@ import (
 )
 
 // Helper functions for suggestion food types
-func getFoodTypesForSuggestion(ctx context.Context, suggestionID int) ([]models.FoodType, error) {
-	rows, err := database.GetPool().Query(ctx,
-		`SELECT ft.id, ft.name, ft.created_at, ft.updated_at
-		FROM food_types ft
-		JOIN suggestion_food_types sft ON ft.id = sft.food_type_id
-		WHERE sft.suggestion_id = $1
-		ORDER BY ft.name`, suggestionID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var foodTypes []models.FoodType
-	for rows.Next() {
-		var ft models.FoodType
-		if err := rows.Scan(&ft.ID, &ft.Name, &ft.CreatedAt, &ft.UpdatedAt); err != nil {
-			return nil, err
-		}
-		foodTypes = append(foodTypes, ft)
-	}
-	return foodTypes, nil
-}
-
 func setFoodTypesForSuggestion(ctx context.Context, suggestionID int, foodTypeIDs []int) error {
 	// Delete existing food types
 	_, err := database.GetPool().Exec(ctx,
@@ -311,6 +289,14 @@ func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
 		categoryID = req.CategoryID
 	}
 
+	// Validate ratings
+	if req.FoodRating < 1 || req.FoodRating > 5 ||
+		req.ServiceRating < 1 || req.ServiceRating > 5 ||
+		req.AmbianceRating < 1 || req.AmbianceRating > 5 {
+		http.Error(w, "Ratings must be between 1 and 5", http.StatusBadRequest)
+		return
+	}
+
 	// Create restaurant
 	var restaurantID int
 	err = database.GetPool().QueryRow(ctx,
@@ -342,11 +328,22 @@ func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Mark suggestion as rejected (converted)
+	// Create initial rating from the conversion
 	_, err = database.GetPool().Exec(ctx,
-		"UPDATE restaurant_suggestions SET status = 'rejected', updated_at = NOW() WHERE id = $1", id)
+		`INSERT INTO ratings (restaurant_id, food_rating, service_rating, ambiance_rating, comment)
+		VALUES ($1, $2, $3, $4, $5)`,
+		restaurantID, req.FoodRating, req.ServiceRating, req.AmbianceRating, req.Comment,
+	)
 	if err != nil {
-		// Non-fatal
+		log.Printf("Warning: Failed to create initial rating for restaurant %d: %v", restaurantID, err)
+	}
+
+	// Delete the suggestion after successful conversion
+	_, err = database.GetPool().Exec(ctx,
+		"DELETE FROM restaurant_suggestions WHERE id = $1", id)
+	if err != nil {
+		// Non-fatal, but log it
+		log.Printf("Warning: Failed to delete converted suggestion %d: %v", id, err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

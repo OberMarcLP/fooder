@@ -1,29 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Loader2, CheckCircle, XCircle, Clock, ListChecks, Trash2 } from 'lucide-react';
+import { Plus, Loader2, XCircle, Clock, ListChecks, Trash2 } from 'lucide-react';
 import {
   RestaurantSuggestion,
-  Category,
   CreateSuggestionData,
   getSuggestions,
   createSuggestion,
-  updateSuggestionStatus,
   convertSuggestion,
   deleteSuggestion,
-  getCategories,
 } from '../services/api';
 import { SuggestionForm } from '../components/SuggestionForm';
 import { Modal } from '../components/Modal';
+import { ReviewConvertModal } from '../components/ReviewConvertModal';
 
 type StatusFilter = '' | 'pending' | 'approved' | 'tested' | 'rejected';
 
 export function SuggestionsPage() {
   const [suggestions, setSuggestions] = useState<RestaurantSuggestion[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [convertingId, setConvertingId] = useState<number | null>(null);
-  const [convertData, setConvertData] = useState({ description: '', category_id: undefined as number | undefined });
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [reviewingName, setReviewingName] = useState('');
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -40,18 +37,6 @@ export function SuggestionsPage() {
     fetchSuggestions();
   }, [fetchSuggestions]);
 
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const cats = await getCategories();
-        setCategories(cats);
-      } catch (error) {
-        console.error('Failed to load categories:', error);
-      }
-    };
-    loadCategories();
-  }, []);
-
   const handleCreate = async (data: CreateSuggestionData) => {
     try {
       await createSuggestion(data);
@@ -63,22 +48,25 @@ export function SuggestionsPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: number, status: string) => {
+  const handleReviewAndConvert = async (data: {
+    foodRating: number;
+    serviceRating: number;
+    ambianceRating: number;
+    comment: string;
+    description: string;
+  }) => {
+    if (!reviewingId) return;
     try {
-      await updateSuggestionStatus(id, status);
-      fetchSuggestions();
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      alert('Failed to update status');
-    }
-  };
-
-  const handleConvert = async () => {
-    if (!convertingId) return;
-    try {
-      await convertSuggestion(convertingId, convertData);
-      setConvertingId(null);
-      setConvertData({ description: '', category_id: undefined });
+      await convertSuggestion(reviewingId, {
+        description: data.description || undefined,
+        category_id: undefined,
+        food_rating: data.foodRating,
+        service_rating: data.serviceRating,
+        ambiance_rating: data.ambianceRating,
+        comment: data.comment || undefined,
+      });
+      setReviewingId(null);
+      setReviewingName('');
       fetchSuggestions();
       alert('Suggestion converted to restaurant successfully!');
     } catch (error) {
@@ -101,8 +89,6 @@ export function SuggestionsPage() {
   const getStatusBadge = (status: string) => {
     const badges = {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      approved: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      tested: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     };
     return badges[status as keyof typeof badges] || '';
@@ -111,8 +97,6 @@ export function SuggestionsPage() {
   const getStatusIcon = (status: string) => {
     const icons = {
       pending: <Clock className="w-4 h-4" />,
-      approved: <CheckCircle className="w-4 h-4" />,
-      tested: <ListChecks className="w-4 h-4" />,
       rejected: <XCircle className="w-4 h-4" />,
     };
     return icons[status as keyof typeof icons] || null;
@@ -141,8 +125,6 @@ export function SuggestionsPage() {
         {[
           { value: '', label: 'All' },
           { value: 'pending', label: 'Pending' },
-          { value: 'approved', label: 'Approved' },
-          { value: 'tested', label: 'Tested' },
           { value: 'rejected', label: 'Rejected' },
         ].map((tab) => (
           <button
@@ -220,60 +202,16 @@ export function SuggestionsPage() {
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-2 ml-4">
                   {suggestion.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => handleStatusUpdate(suggestion.id, 'approved')}
-                        className="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate(suggestion.id, 'rejected')}
-                        className="btn btn-sm bg-red-500 hover:bg-red-600 text-white flex items-center gap-1"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </button>
-                    </>
-                  )}
-
-                  {suggestion.status === 'approved' && (
-                    <>
-                      <button
-                        onClick={() => handleStatusUpdate(suggestion.id, 'tested')}
-                        className="btn btn-sm bg-green-500 hover:bg-green-600 text-white flex items-center gap-1"
-                      >
-                        <ListChecks className="w-4 h-4" />
-                        Mark Tested
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate(suggestion.id, 'rejected')}
-                        className="btn btn-sm bg-red-500 hover:bg-red-600 text-white flex items-center gap-1"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </button>
-                    </>
-                  )}
-
-                  {suggestion.status === 'tested' && (
-                    <>
-                      <button
-                        onClick={() => setConvertingId(suggestion.id)}
-                        className="btn btn-sm bg-green-500 hover:bg-green-600 text-white flex items-center gap-1"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Convert
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate(suggestion.id, 'rejected')}
-                        className="btn btn-sm bg-red-500 hover:bg-red-600 text-white flex items-center gap-1"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </button>
-                    </>
+                    <button
+                      onClick={() => {
+                        setReviewingId(suggestion.id);
+                        setReviewingName(suggestion.name);
+                      }}
+                      className="btn btn-sm bg-green-500 hover:bg-green-600 text-white flex items-center gap-1"
+                    >
+                      <ListChecks className="w-4 h-4" />
+                      Test & Review
+                    </button>
                   )}
 
                   <button
@@ -295,68 +233,16 @@ export function SuggestionsPage() {
         <SuggestionForm onSubmit={handleCreate} onCancel={() => setShowAddModal(false)} />
       </Modal>
 
-      {/* Convert Suggestion Modal */}
-      <Modal
-        isOpen={convertingId !== null}
+      {/* Review and Convert Modal */}
+      <ReviewConvertModal
+        isOpen={reviewingId !== null}
         onClose={() => {
-          setConvertingId(null);
-          setConvertData({ description: '', category_id: undefined });
+          setReviewingId(null);
+          setReviewingName('');
         }}
-        title="Convert to Restaurant"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            This will create a permanent restaurant from this suggestion. You can optionally add a description and override the category.
-          </p>
-
-          <div>
-            <label className="label">Description (optional)</label>
-            <textarea
-              value={convertData.description}
-              onChange={(e) => setConvertData({ ...convertData, description: e.target.value })}
-              className="input min-h-[100px]"
-              rows={3}
-              placeholder="Add a description for the restaurant..."
-            />
-          </div>
-
-          <div>
-            <label className="label">Category Override (optional)</label>
-            <select
-              value={convertData.category_id || ''}
-              onChange={(e) =>
-                setConvertData({
-                  ...convertData,
-                  category_id: e.target.value ? parseInt(e.target.value) : undefined,
-                })
-              }
-              className="input"
-            >
-              <option value="">Use suggested category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button onClick={handleConvert} className="btn btn-primary flex-1">
-              Convert to Restaurant
-            </button>
-            <button
-              onClick={() => {
-                setConvertingId(null);
-                setConvertData({ description: '', category_id: undefined });
-              }}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onSubmit={handleReviewAndConvert}
+        restaurantName={reviewingName}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/fooder/backend/internal/database"
 	"github.com/fooder/backend/internal/handlers"
+	"github.com/fooder/backend/internal/services"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
@@ -17,6 +18,13 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
+
+	// Initialize S3 service (optional - falls back to local storage if not configured)
+	if err := services.InitS3(); err != nil {
+		log.Printf("S3 not configured, using local storage: %v", err)
+	} else {
+		log.Println("S3 storage configured successfully")
+	}
 
 	// Create router
 	r := mux.NewRouter()
@@ -51,6 +59,9 @@ func main() {
 	api.HandleFunc("/restaurants/{id}", handlers.UpdateRestaurant).Methods("PUT")
 	api.HandleFunc("/restaurants/{id}", handlers.DeleteRestaurant).Methods("DELETE")
 
+	// Global Search
+	api.HandleFunc("/search", handlers.GlobalSearch).Methods("GET")
+
 	// Ratings
 	api.HandleFunc("/restaurants/{restaurantId}/ratings", handlers.GetRatings).Methods("GET")
 	api.HandleFunc("/ratings", handlers.CreateRating).Methods("POST")
@@ -84,7 +95,7 @@ func main() {
 	// CORS middleware
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})

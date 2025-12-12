@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,9 +11,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fooder/backend/internal/database"
 	"github.com/fooder/backend/internal/models"
+	"github.com/fooder/backend/internal/services"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -23,7 +26,7 @@ const (
 )
 
 func init() {
-	// Create uploads directory if it doesn't exist
+	// Create uploads directory if it doesn't exist (fallback for local storage)
 	os.MkdirAll(uploadsDir, 0755)
 }
 
@@ -49,6 +52,8 @@ func GetMenuPhotos(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	photos := []models.MenuPhoto{}
+	s3Service := services.GetS3Service()
+
 	for rows.Next() {
 		var photo models.MenuPhoto
 		if err := rows.Scan(
@@ -58,8 +63,21 @@ func GetMenuPhotos(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// Compute URL
-		photo.URL = fmt.Sprintf("/api/uploads/menu_photos/%s", photo.Filename)
+
+		// Generate URL based on storage type
+		if s3Service != nil {
+			// Generate presigned URL for S3 (valid for 1 hour)
+			presignedURL, err := s3Service.GetPresignedURL(ctx, fmt.Sprintf("menu_photos/%s", photo.Filename), time.Hour)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to generate URL: %v", err), http.StatusInternalServerError)
+				return
+			}
+			photo.URL = presignedURL
+		} else {
+			// Use local file URL
+			photo.URL = fmt.Sprintf("/api/uploads/menu_photos/%s", photo.Filename)
+		}
+
 		photos = append(photos, photo)
 	}
 
@@ -120,25 +138,57 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	ext := filepath.Ext(header.Filename)
 	filename := uuid.New().String() + ext
 
-	// Create file on disk
-	filePath := filepath.Join(uploadsDir, filename)
-	dst, err := os.Create(filePath)
-	if err != nil {
-		http.Error(w, "Failed to save file", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
+	ctx := context.Background()
+	s3Service := services.GetS3Service()
+	var fileSize int64
+	var photoURL string
 
-	// Copy file content
-	fileSize, err := io.Copy(dst, file)
-	if err != nil {
-		os.Remove(filePath) // Clean up on error
-		http.Error(w, "Failed to save file", http.StatusInternalServerError)
-		return
+	if s3Service != nil {
+		// Upload to S3
+		// Read file content into buffer
+		fileBuffer := &bytes.Buffer{}
+		fileSize, err = io.Copy(fileBuffer, file)
+		if err != nil {
+			http.Error(w, "Failed to read file", http.StatusInternalServerError)
+			return
+		}
+
+		// Upload to S3
+		s3Key := fmt.Sprintf("menu_photos/%s", filename)
+		_, err = s3Service.UploadFile(ctx, s3Key, bytes.NewReader(fileBuffer.Bytes()), contentType)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to upload file to S3: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Generate presigned URL for immediate response
+		photoURL, err = s3Service.GetPresignedURL(ctx, s3Key, time.Hour)
+		if err != nil {
+			http.Error(w, "Failed to generate URL", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Fallback to local storage
+		filePath := filepath.Join(uploadsDir, filename)
+		dst, err := os.Create(filePath)
+		if err != nil {
+			http.Error(w, "Failed to save file", http.StatusInternalServerError)
+			return
+		}
+		defer dst.Close()
+
+		// Copy file content
+		fileSize, err = io.Copy(dst, file)
+		if err != nil {
+			os.Remove(filePath) // Clean up on error
+			http.Error(w, "Failed to save file", http.StatusInternalServerError)
+			return
+		}
+
+		photoURL = fmt.Sprintf("/api/uploads/menu_photos/%s", filename)
 	}
 
 	// Save to database
-	ctx := context.Background()
 	var photo models.MenuPhoto
 	err = database.GetPool().QueryRow(ctx,
 		`INSERT INTO menu_photos (restaurant_id, filename, original_filename, caption, file_size, mime_type)
@@ -150,13 +200,18 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 		&photo.Caption, &photo.FileSize, &photo.MimeType, &photo.CreatedAt, &photo.UpdatedAt,
 	)
 	if err != nil {
-		os.Remove(filePath) // Clean up on error
+		// Clean up uploaded file on database error
+		if s3Service != nil {
+			s3Service.DeleteFile(ctx, fmt.Sprintf("menu_photos/%s", filename))
+		} else {
+			os.Remove(filepath.Join(uploadsDir, filename))
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Compute URL
-	photo.URL = fmt.Sprintf("/api/uploads/menu_photos/%s", photo.Filename)
+	// Set URL
+	photo.URL = photoURL
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -240,9 +295,16 @@ func DeleteMenuPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete file from disk (non-fatal if fails)
-	filePath := filepath.Join(uploadsDir, filename)
-	os.Remove(filePath)
+	// Delete file from storage (non-fatal if fails)
+	s3Service := services.GetS3Service()
+	if s3Service != nil {
+		// Delete from S3
+		s3Service.DeleteFile(ctx, fmt.Sprintf("menu_photos/%s", filename))
+	} else {
+		// Delete from local disk
+		filePath := filepath.Join(uploadsDir, filename)
+		os.Remove(filePath)
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
