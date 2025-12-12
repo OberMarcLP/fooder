@@ -1,5 +1,6 @@
 # Environment
 .env
+uploads/
 
 # Dependencies
 node_modules/
