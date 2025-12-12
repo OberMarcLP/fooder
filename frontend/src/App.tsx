@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { Home, Tag, Utensils } from 'lucide-react';
+import { Home, Tag, Utensils, Lightbulb } from 'lucide-react';
 import { useTheme } from './hooks/useTheme';
 import { ThemeToggle } from './components/ThemeToggle';
 import { HomePage } from './pages/HomePage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { FoodTypesPage } from './pages/FoodTypesPage';
+import { SuggestionsPage } from './pages/SuggestionsPage';
 
 function App() {
   const { isDark, toggleTheme } = useTheme();
@@ -59,6 +60,19 @@ function App() {
                     <Utensils className="w-4 h-4" />
                     <span className="hidden sm:inline">Food Types</span>
                   </NavLink>
+                  <NavLink
+                    to="/suggestions"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`
+                    }
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                    <span className="hidden sm:inline">Suggestions</span>
+                  </NavLink>
                 </div>
               </div>
               <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
@@ -71,6 +85,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/food-types" element={<FoodTypesPage />} />
+            <Route path="/suggestions" element={<SuggestionsPage />} />
           </Routes>
         </main>
       </div>

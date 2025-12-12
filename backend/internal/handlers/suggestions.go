@@ -1,0 +1,381 @@
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	"github.com/fooder/backend/internal/database"
+	"github.com/fooder/backend/internal/models"
+	"github.com/gorilla/mux"
+)
+
+// Helper functions for suggestion food types
+func getFoodTypesForSuggestion(ctx context.Context, suggestionID int) ([]models.FoodType, error) {
+	rows, err := database.GetPool().Query(ctx,
+		`SELECT ft.id, ft.name, ft.created_at, ft.updated_at
+		FROM food_types ft
+		JOIN suggestion_food_types sft ON ft.id = sft.food_type_id
+		WHERE sft.suggestion_id = $1
+		ORDER BY ft.name`, suggestionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var foodTypes []models.FoodType
+	for rows.Next() {
+		var ft models.FoodType
+		if err := rows.Scan(&ft.ID, &ft.Name, &ft.CreatedAt, &ft.UpdatedAt); err != nil {
+			return nil, err
+		}
+		foodTypes = append(foodTypes, ft)
+	}
+	return foodTypes, nil
+}
+
+func setFoodTypesForSuggestion(ctx context.Context, suggestionID int, foodTypeIDs []int) error {
+	// Delete existing food types
+	_, err := database.GetPool().Exec(ctx,
+		"DELETE FROM suggestion_food_types WHERE suggestion_id = $1", suggestionID)
+	if err != nil {
+		return err
+	}
+
+	// Insert new food types
+	for _, ftID := range foodTypeIDs {
+		_, err := database.GetPool().Exec(ctx,
+			"INSERT INTO suggestion_food_types (suggestion_id, food_type_id) VALUES ($1, $2)",
+			suggestionID, ftID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetSuggestions retrieves all suggestions with optional status filter
+func GetSuggestions(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	statusFilter := r.URL.Query().Get("status")
+
+	var query string
+	var args []interface{}
+
+	if statusFilter != "" {
+		query = `
+			SELECT
+				s.id, s.name, s.address, s.phone, s.website, s.latitude, s.longitude,
+				s.google_place_id, s.suggested_category_id, s.notes, s.status,
+				s.created_at, s.updated_at,
+				c.id, c.name
+			FROM restaurant_suggestions s
+			LEFT JOIN categories c ON s.suggested_category_id = c.id
+			WHERE s.status = $1
+			ORDER BY s.created_at DESC
+		`
+		args = append(args, statusFilter)
+	} else {
+		query = `
+			SELECT
+				s.id, s.name, s.address, s.phone, s.website, s.latitude, s.longitude,
+				s.google_place_id, s.suggested_category_id, s.notes, s.status,
+				s.created_at, s.updated_at,
+				c.id, c.name
+			FROM restaurant_suggestions s
+			LEFT JOIN categories c ON s.suggested_category_id = c.id
+			ORDER BY s.created_at DESC
+		`
+	}
+
+	rows, err := database.GetPool().Query(ctx, query, args...)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	suggestions := []models.RestaurantSuggestion{}
+	for rows.Next() {
+		var sug models.RestaurantSuggestion
+		var catID *int
+		var catName *string
+
+		if err := rows.Scan(
+			&sug.ID, &sug.Name, &sug.Address, &sug.Phone, &sug.Website, &sug.Latitude, &sug.Longitude,
+			&sug.GooglePlaceID, &sug.SuggestedCategoryID, &sug.Notes, &sug.Status,
+			&sug.CreatedAt, &sug.UpdatedAt,
+			&catID, &catName,
+		); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if catID != nil && catName != nil {
+			sug.Category = &models.Category{ID: *catID, Name: *catName}
+		}
+
+		// Get food types
+		foodTypes, err := getFoodTypesForSuggestion(ctx, sug.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		sug.FoodTypes = foodTypes
+
+		suggestions = append(suggestions, sug)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(suggestions)
+}
+
+// GetSuggestion retrieves a single suggestion by ID
+func GetSuggestion(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid suggestion ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	query := `
+		SELECT
+			s.id, s.name, s.address, s.phone, s.website, s.latitude, s.longitude,
+			s.google_place_id, s.suggested_category_id, s.notes, s.status,
+			s.created_at, s.updated_at,
+			c.id, c.name
+		FROM restaurant_suggestions s
+		LEFT JOIN categories c ON s.suggested_category_id = c.id
+		WHERE s.id = $1
+	`
+
+	var sug models.RestaurantSuggestion
+	var catID *int
+	var catName *string
+
+	err = database.GetPool().QueryRow(ctx, query, id).Scan(
+		&sug.ID, &sug.Name, &sug.Address, &sug.Phone, &sug.Website, &sug.Latitude, &sug.Longitude,
+		&sug.GooglePlaceID, &sug.SuggestedCategoryID, &sug.Notes, &sug.Status,
+		&sug.CreatedAt, &sug.UpdatedAt,
+		&catID, &catName,
+	)
+	if err != nil {
+		http.Error(w, "Suggestion not found", http.StatusNotFound)
+		return
+	}
+
+	if catID != nil && catName != nil {
+		sug.Category = &models.Category{ID: *catID, Name: *catName}
+	}
+
+	// Get food types
+	foodTypes, err := getFoodTypesForSuggestion(ctx, sug.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sug.FoodTypes = foodTypes
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sug)
+}
+
+// CreateSuggestion creates a new restaurant suggestion
+func CreateSuggestion(w http.ResponseWriter, r *http.Request) {
+	var req models.CreateSuggestionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	var sug models.RestaurantSuggestion
+	err := database.GetPool().QueryRow(ctx,
+		`INSERT INTO restaurant_suggestions (name, address, phone, website, latitude, longitude, google_place_id, suggested_category_id, notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, name, address, phone, website, latitude, longitude, google_place_id, suggested_category_id, notes, status, created_at, updated_at`,
+		req.Name, req.Address, req.Phone, req.Website, req.Latitude, req.Longitude, req.GooglePlaceID, req.SuggestedCategoryID, req.Notes,
+	).Scan(
+		&sug.ID, &sug.Name, &sug.Address, &sug.Phone, &sug.Website, &sug.Latitude, &sug.Longitude,
+		&sug.GooglePlaceID, &sug.SuggestedCategoryID, &sug.Notes, &sug.Status, &sug.CreatedAt, &sug.UpdatedAt,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set food types
+	if len(req.FoodTypeIDs) > 0 {
+		if err := setFoodTypesForSuggestion(ctx, sug.ID, req.FoodTypeIDs); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		foodTypes, _ := getFoodTypesForSuggestion(ctx, sug.ID)
+		sug.FoodTypes = foodTypes
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(sug)
+}
+
+// UpdateSuggestionStatus updates the status of a suggestion
+func UpdateSuggestionStatus(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid suggestion ID", http.StatusBadRequest)
+		return
+	}
+
+	var req models.UpdateSuggestionStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate status
+	validStatuses := map[string]bool{"pending": true, "approved": true, "tested": true, "rejected": true}
+	if !validStatuses[req.Status] {
+		http.Error(w, "Invalid status", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	var sug models.RestaurantSuggestion
+	err = database.GetPool().QueryRow(ctx,
+		`UPDATE restaurant_suggestions SET status = $1, updated_at = NOW()
+		WHERE id = $2
+		RETURNING id, name, address, phone, website, latitude, longitude, google_place_id, suggested_category_id, notes, status, created_at, updated_at`,
+		req.Status, id,
+	).Scan(
+		&sug.ID, &sug.Name, &sug.Address, &sug.Phone, &sug.Website, &sug.Latitude, &sug.Longitude,
+		&sug.GooglePlaceID, &sug.SuggestedCategoryID, &sug.Notes, &sug.Status, &sug.CreatedAt, &sug.UpdatedAt,
+	)
+	if err != nil {
+		http.Error(w, "Suggestion not found", http.StatusNotFound)
+		return
+	}
+
+	foodTypes, _ := getFoodTypesForSuggestion(ctx, sug.ID)
+	sug.FoodTypes = foodTypes
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sug)
+}
+
+// ConvertSuggestion converts a suggestion to a permanent restaurant
+func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid suggestion ID", http.StatusBadRequest)
+		return
+	}
+
+	var req models.ConvertSuggestionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get the suggestion
+	var sug models.RestaurantSuggestion
+	err = database.GetPool().QueryRow(ctx,
+		`SELECT id, name, address, phone, website, latitude, longitude, google_place_id, suggested_category_id, status
+		FROM restaurant_suggestions WHERE id = $1`, id,
+	).Scan(
+		&sug.ID, &sug.Name, &sug.Address, &sug.Phone, &sug.Website, &sug.Latitude, &sug.Longitude,
+		&sug.GooglePlaceID, &sug.SuggestedCategoryID, &sug.Status,
+	)
+	if err != nil {
+		http.Error(w, "Suggestion not found", http.StatusNotFound)
+		return
+	}
+
+	// Determine category (override if provided, otherwise use suggested)
+	categoryID := sug.SuggestedCategoryID
+	if req.CategoryID != nil {
+		categoryID = req.CategoryID
+	}
+
+	// Create restaurant
+	var restaurantID int
+	err = database.GetPool().QueryRow(ctx,
+		`INSERT INTO restaurants (name, description, address, phone, website, latitude, longitude, google_place_id, category_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id`,
+		sug.Name, req.Description, sug.Address, sug.Phone, sug.Website, sug.Latitude, sug.Longitude, sug.GooglePlaceID, categoryID,
+	).Scan(&restaurantID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Copy food types from suggestion to restaurant
+	foodTypes, _ := getFoodTypesForSuggestion(ctx, sug.ID)
+	if len(foodTypes) > 0 {
+		var foodTypeIDs []int
+		for _, ft := range foodTypes {
+			foodTypeIDs = append(foodTypeIDs, ft.ID)
+		}
+		for _, ftID := range foodTypeIDs {
+			_, err := database.GetPool().Exec(ctx,
+				"INSERT INTO restaurant_food_types (restaurant_id, food_type_id) VALUES ($1, $2)",
+				restaurantID, ftID)
+			if err != nil {
+				// Non-fatal, continue
+				continue
+			}
+		}
+	}
+
+	// Mark suggestion as rejected (converted)
+	_, err = database.GetPool().Exec(ctx,
+		"UPDATE restaurant_suggestions SET status = 'rejected', updated_at = NOW() WHERE id = $1", id)
+	if err != nil {
+		// Non-fatal
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"restaurant_id": restaurantID,
+		"message":       "Suggestion converted to restaurant successfully",
+	})
+}
+
+// DeleteSuggestion deletes a suggestion
+func DeleteSuggestion(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid suggestion ID", http.StatusBadRequest)
+		return
+	}
+
+	result, err := database.GetPool().Exec(context.Background(),
+		"DELETE FROM restaurant_suggestions WHERE id = $1", id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if result.RowsAffected() == 0 {
+		http.Error(w, "Suggestion not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

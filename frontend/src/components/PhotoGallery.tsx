@@ -1,0 +1,140 @@
+import { useState } from 'react';
+import { MenuPhoto } from '../services/api';
+import { Trash2, Edit2, Check, X } from 'lucide-react';
+
+interface PhotoGalleryProps {
+  photos: MenuPhoto[];
+  onCaptionUpdate: (id: number, caption: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+}
+
+export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGalleryProps) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editCaption, setEditCaption] = useState('');
+
+  const handleStartEdit = (photo: MenuPhoto) => {
+    setEditingId(photo.id);
+    setEditCaption(photo.caption);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditCaption('');
+  };
+
+  const handleSaveEdit = async (id: number) => {
+    if (!editCaption.trim()) {
+      alert('Caption cannot be empty');
+      return;
+    }
+
+    try {
+      await onCaptionUpdate(id, editCaption);
+      setEditingId(null);
+      setEditCaption('');
+    } catch (error) {
+      console.error('Failed to update caption:', error);
+      alert('Failed to update caption');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this photo?')) return;
+
+    try {
+      await onDelete(id);
+    } catch (error) {
+      console.error('Failed to delete photo:', error);
+      alert('Failed to delete photo');
+    }
+  };
+
+  if (photos.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        No photos uploaded yet
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {photos.map((photo) => (
+        <div
+          key={photo.id}
+          className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white dark:bg-gray-800"
+        >
+          <div className="relative group">
+            <img
+              src={photo.url}
+              alt={photo.caption}
+              className="w-full h-48 object-cover"
+              onError={(e) => {
+                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%" y="50%" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+              }}
+            />
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+              <button
+                onClick={() => handleStartEdit(photo)}
+                className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg"
+                title="Edit caption"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDelete(photo.id)}
+                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg"
+                title="Delete photo"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3">
+            {editingId === photo.id ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={editCaption}
+                  onChange={(e) => setEditCaption(e.target.value)}
+                  className="input text-sm py-1"
+                  placeholder="Dish name"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSaveEdit(photo.id)}
+                    className="flex-1 btn btn-sm bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-1"
+                  >
+                    <Check className="w-4 h-4" />
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="flex-1 btn btn-sm bg-gray-500 hover:bg-gray-600 text-white flex items-center justify-center gap-1"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h3 className="font-semibold text-sm mb-1">{photo.caption}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(photo.created_at).toLocaleDateString()}
+                </p>
+                {photo.file_size && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {(photo.file_size / 1024).toFixed(1)} KB
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

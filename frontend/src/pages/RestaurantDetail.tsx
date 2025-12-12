@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Tag, Utensils, Edit, Trash2, Plus, Loader2, Phone, Globe } from 'lucide-react';
-import { Restaurant, Rating, getRatings, createRating } from '../services/api';
+import { MapPin, Tag, Utensils, Edit, Trash2, Plus, Loader2, Phone, Globe, Camera, ChevronUp } from 'lucide-react';
+import { Restaurant, Rating, MenuPhoto, getRatings, createRating, getMenuPhotos, uploadMenuPhoto, updatePhotoCaption, deleteMenuPhoto } from '../services/api';
 import { StarRating } from '../components/StarRating';
 import { RestaurantMap } from '../components/RestaurantMap';
 import { RatingForm } from '../components/RatingForm';
+import { PhotoUpload } from '../components/PhotoUpload';
+import { PhotoGallery } from '../components/PhotoGallery';
 
 interface RestaurantDetailProps {
   restaurant: Restaurant;
@@ -14,8 +16,11 @@ interface RestaurantDetailProps {
 
 export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }: RestaurantDetailProps) {
   const [ratings, setRatings] = useState<Rating[]>([]);
+  const [photos, setPhotos] = useState<MenuPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPhotos, setLoadingPhotos] = useState(true);
   const [showRatingForm, setShowRatingForm] = useState(false);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
 
   const fetchRatings = async () => {
     try {
@@ -28,8 +33,20 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
     }
   };
 
+  const fetchPhotos = async () => {
+    try {
+      const data = await getMenuPhotos(restaurant.id);
+      setPhotos(data);
+    } catch (error) {
+      console.error('Failed to fetch photos:', error);
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
+
   useEffect(() => {
     fetchRatings();
+    fetchPhotos();
   }, [restaurant.id]);
 
   const handleAddRating = async (data: {
@@ -46,6 +63,22 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
     } catch (error) {
       console.error('Failed to create rating:', error);
     }
+  };
+
+  const handlePhotoUpload = async (file: File, caption: string) => {
+    await uploadMenuPhoto(restaurant.id, file, caption);
+    fetchPhotos();
+    setShowPhotoUpload(false);
+  };
+
+  const handleCaptionUpdate = async (id: number, caption: string) => {
+    await updatePhotoCaption(id, caption);
+    fetchPhotos();
+  };
+
+  const handlePhotoDelete = async (id: number) => {
+    await deleteMenuPhoto(id);
+    fetchPhotos();
   };
 
   return (
@@ -140,6 +173,49 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
           />
         </div>
       )}
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Camera className="w-5 h-5" />
+            Menu Photos
+          </h3>
+          <button
+            onClick={() => setShowPhotoUpload(!showPhotoUpload)}
+            className="btn btn-primary flex items-center gap-2 text-sm"
+          >
+            {showPhotoUpload ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Hide Upload
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Upload Photo
+              </>
+            )}
+          </button>
+        </div>
+
+        {showPhotoUpload && (
+          <div className="card mb-4">
+            <PhotoUpload onUpload={handlePhotoUpload} />
+          </div>
+        )}
+
+        {loadingPhotos ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+          </div>
+        ) : (
+          <PhotoGallery
+            photos={photos}
+            onCaptionUpdate={handleCaptionUpdate}
+            onDelete={handlePhotoDelete}
+          />
+        )}
+      </div>
 
       <div>
         <div className="flex items-center justify-between mb-4">
