@@ -26,6 +26,12 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip logging for health check requests from Docker
+		if r.URL.Path == "/api/health" && r.Header.Get("User-Agent") == "Wget" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 
 		// Wrap the response writer to capture status code

@@ -1,0 +1,865 @@
+openapi: 3.0.3
+info:
+  title: The Nom Database API
+  description: Restaurant rating application API with Google Maps integration
+  version: 1.0.0
+  contact:
+    name: The Nom Database
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Restaurants
+    description: Restaurant management
+  - name: Ratings
+    description: Restaurant ratings
+  - name: Categories
+    description: Cultural categories
+  - name: Food Types
+    description: Food type management
+  - name: Google Maps
+    description: Google Maps integration
+  - name: Suggestions
+    description: Restaurant suggestions
+  - name: Menu Photos
+    description: Menu photo uploads
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the API is running
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /restaurants:
+    get:
+      tags:
+        - Restaurants
+      summary: List all restaurants
+      description: Get a list of all restaurants with optional filters
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: food_type_id
+          in: query
+          schema:
+            type: integer
+        - name: include_suggestions
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of restaurants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Restaurant'
+
+    post:
+      tags:
+        - Restaurants
+      summary: Create a new restaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRestaurant'
+      responses:
+        '201':
+          description: Restaurant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '400':
+          description: Invalid input
+        '409':
+          description: Restaurant already exists
+
+  /restaurants/{id}:
+    get:
+      tags:
+        - Restaurants
+      summary: Get restaurant by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Restaurant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '404':
+          description: Restaurant not found
+
+    put:
+      tags:
+        - Restaurants
+      summary: Update a restaurant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRestaurant'
+      responses:
+        '200':
+          description: Restaurant updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '404':
+          description: Restaurant not found
+
+    delete:
+      tags:
+        - Restaurants
+      summary: Delete a restaurant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Restaurant deleted
+        '404':
+          description: Restaurant not found
+
+  /restaurants/{id}/ratings:
+    get:
+      tags:
+        - Ratings
+      summary: Get restaurant ratings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of ratings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Rating'
+
+  /ratings:
+    post:
+      tags:
+        - Ratings
+      summary: Create a new rating
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRating'
+      responses:
+        '201':
+          description: Rating created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rating'
+        '400':
+          description: Invalid input
+
+  /ratings/{id}:
+    delete:
+      tags:
+        - Ratings
+      summary: Delete a rating
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Rating deleted
+        '404':
+          description: Rating not found
+
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: List all categories
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+    post:
+      tags:
+        - Categories
+      summary: Create a new category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+
+  /categories/{id}:
+    put:
+      tags:
+        - Categories
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+
+    delete:
+      tags:
+        - Categories
+      summary: Delete a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Category deleted
+
+  /food-types:
+    get:
+      tags:
+        - Food Types
+      summary: List all food types
+      responses:
+        '200':
+          description: List of food types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodType'
+
+    post:
+      tags:
+        - Food Types
+      summary: Create a new food type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Food type created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodType'
+
+  /food-types/{id}:
+    put:
+      tags:
+        - Food Types
+      summary: Update a food type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Food type updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodType'
+
+    delete:
+      tags:
+        - Food Types
+      summary: Delete a food type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Food type deleted
+
+  /places/search:
+    get:
+      tags:
+        - Google Maps
+      summary: Search for places using Google Maps
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+      responses:
+        '200':
+          description: List of places
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Place'
+
+  /places/{placeId}:
+    get:
+      tags:
+        - Google Maps
+      summary: Get place details by Google Place ID
+      parameters:
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Place details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceDetail'
+
+  /suggestions:
+    get:
+      tags:
+        - Suggestions
+      summary: List all restaurant suggestions
+      responses:
+        '200':
+          description: List of suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Suggestion'
+
+    post:
+      tags:
+        - Suggestions
+      summary: Create a new suggestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSuggestion'
+      responses:
+        '201':
+          description: Suggestion created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Suggestion'
+        '409':
+          description: Restaurant already exists
+
+  /suggestions/{id}:
+    put:
+      tags:
+        - Suggestions
+      summary: Update a suggestion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, approved, tested, rejected]
+      responses:
+        '200':
+          description: Suggestion updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Suggestion'
+
+    delete:
+      tags:
+        - Suggestions
+      summary: Delete a suggestion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Suggestion deleted
+
+  /suggestions/{id}/convert:
+    post:
+      tags:
+        - Suggestions
+      summary: Convert suggestion to restaurant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConvertSuggestion'
+      responses:
+        '201':
+          description: Suggestion converted to restaurant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+
+  /restaurants/{id}/photos:
+    post:
+      tags:
+        - Menu Photos
+      summary: Upload a menu photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                caption:
+                  type: string
+      responses:
+        '201':
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuPhoto'
+
+  /photos/{id}:
+    delete:
+      tags:
+        - Menu Photos
+      summary: Delete a menu photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Photo deleted
+
+components:
+  schemas:
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        website:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        google_place_id:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/Category'
+        food_type:
+          $ref: '#/components/schemas/FoodType'
+        avg_food_rating:
+          type: number
+          format: double
+        avg_service_rating:
+          type: number
+          format: double
+        avg_ambiance_rating:
+          type: number
+          format: double
+        avg_overall_rating:
+          type: number
+          format: double
+        rating_count:
+          type: integer
+        menu_photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuPhoto'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateRestaurant:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        website:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        google_place_id:
+          type: string
+        description:
+          type: string
+        category_id:
+          type: integer
+        food_type_id:
+          type: integer
+
+    Rating:
+      type: object
+      properties:
+        id:
+          type: integer
+        restaurant_id:
+          type: integer
+        food_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        service_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        ambiance_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        overall_rating:
+          type: number
+          format: double
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CreateRating:
+      type: object
+      required:
+        - restaurant_id
+        - food_rating
+        - service_rating
+        - ambiance_rating
+      properties:
+        restaurant_id:
+          type: integer
+        food_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        service_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        ambiance_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    FoodType:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    Place:
+      type: object
+      properties:
+        place_id:
+          type: string
+        name:
+          type: string
+        formatted_address:
+          type: string
+        rating:
+          type: number
+          format: double
+        user_ratings_total:
+          type: integer
+
+    PlaceDetail:
+      type: object
+      properties:
+        place_id:
+          type: string
+        name:
+          type: string
+        formatted_address:
+          type: string
+        formatted_phone_number:
+          type: string
+        website:
+          type: string
+        rating:
+          type: number
+          format: double
+        user_ratings_total:
+          type: integer
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+
+    Suggestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        website:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        google_place_id:
+          type: string
+        suggested_category_id:
+          type: integer
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, tested, rejected]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateSuggestion:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        website:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        google_place_id:
+          type: string
+        suggested_category_id:
+          type: integer
+        notes:
+          type: string
+
+    ConvertSuggestion:
+      type: object
+      properties:
+        description:
+          type: string
+        category_id:
+          type: integer
+        food_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        service_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        ambiance_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+
+    MenuPhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+        restaurant_id:
+          type: integer
+        url:
+          type: string
+        caption:
+          type: string
+        file_size:
+          type: integer
+        created_at:
+          type: string
+          format: date-time

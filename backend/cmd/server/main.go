@@ -11,6 +11,7 @@ import (
 	"github.com/nomdb/backend/internal/services"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func main() {
@@ -103,6 +104,17 @@ func main() {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
+	// Serve the swagger.yaml file first
+	api.HandleFunc("/swagger.yaml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-yaml")
+		http.ServeFile(w, r, "./docs/swagger.yaml")
+	}).Methods("GET")
+
+	// Swagger UI - serve at /api/docs (must be after swagger.yaml)
+	api.PathPrefix("/docs/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("/api/swagger.yaml"),
+	))
+
 	// CORS middleware
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173"},
@@ -122,6 +134,7 @@ func main() {
 
 	logger.Info("🌐 Server listening on http://localhost:%s", port)
 	logger.Info("📡 API available at http://localhost:%s/api", port)
+	logger.Info("📚 Swagger UI available at http://localhost:%s/api/docs", port)
 	logger.Info("✅ Server ready to accept connections")
 
 	if err := http.ListenAndServe(":"+port, handler); err != nil {

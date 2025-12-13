@@ -146,6 +146,7 @@ docker compose up --build
 2. Access the application:
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080/api
+   - Swagger UI (API Documentation): http://localhost:8080/api/docs
 
 **Note:** The first build may take a few minutes. Subsequent starts will be faster.
 
@@ -223,6 +224,19 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## API Documentation
+
+The API includes interactive documentation via Swagger UI, accessible at:
+- **Swagger UI**: http://localhost:8080/api/docs
+
+The Swagger UI provides:
+- Complete API endpoint documentation
+- Request/response schemas with examples
+- Interactive "Try it out" functionality to test endpoints directly
+- Authentication support (if configured)
+
+For a quick reference, see the endpoints below, or use Swagger UI for detailed schemas and testing.
 
 ## API Endpoints
 
