@@ -1,29 +1,36 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
-	"github.com/fooder/backend/internal/database"
-	"github.com/fooder/backend/internal/handlers"
-	"github.com/fooder/backend/internal/services"
+	"github.com/nomdb/backend/internal/database"
+	"github.com/nomdb/backend/internal/handlers"
+	"github.com/nomdb/backend/internal/logger"
+	"github.com/nomdb/backend/internal/middleware"
+	"github.com/nomdb/backend/internal/services"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
 
 func main() {
+	logger.Info("🚀 Starting The Nom Database server...")
+	if logger.IsDebugMode() {
+		logger.Debug("🐛 Debug mode enabled - detailed logging active")
+	}
+
 	// Connect to database
 	if err := database.Connect(); err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Fatal("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
 
+	// Initialize Google Maps service
+	_ = services.NewGoogleMapsService()
+
 	// Initialize S3 service (optional - falls back to local storage if not configured)
 	if err := services.InitS3(); err != nil {
-		log.Printf("S3 not configured, using local storage: %v", err)
-	} else {
-		log.Println("S3 storage configured successfully")
+		logger.Debug("S3 initialization skipped: %v", err)
 	}
 
 	// Create router
@@ -31,7 +38,11 @@ func main() {
 
 	// Create uploads directory and serve static files
 	uploadsDir := "./uploads"
-	os.MkdirAll(uploadsDir+"/menu_photos", 0755)
+	if err := os.MkdirAll(uploadsDir+"/menu_photos", 0755); err != nil {
+		logger.Warn("Failed to create uploads directory: %v", err)
+	} else {
+		logger.Debug("📁 Uploads directory ready: %s", uploadsDir)
+	}
 	r.PathPrefix("/api/uploads/").Handler(
 		http.StripPrefix("/api/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
@@ -100,7 +111,8 @@ func main() {
 		AllowCredentials: true,
 	})
 
-	handler := c.Handler(r)
+	// Apply middleware chain
+	handler := middleware.LoggingMiddleware(c.Handler(r))
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -108,8 +120,11 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server starting on port %s", port)
+	logger.Info("🌐 Server listening on http://localhost:%s", port)
+	logger.Info("📡 API available at http://localhost:%s/api", port)
+	logger.Info("✅ Server ready to accept connections")
+
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+		logger.Fatal("Server failed to start: %v", err)
 	}
 }

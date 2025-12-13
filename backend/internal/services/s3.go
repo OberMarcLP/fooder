@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/nomdb/backend/internal/logger"
 )
 
 type S3Service struct {
@@ -23,14 +24,19 @@ var s3Service *S3Service
 
 // InitS3 initializes the S3 service with credentials
 func InitS3() error {
+	logger.Info("☁️  Initializing AWS S3 service...")
+
 	awsAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 	awsSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	awsRegion := os.Getenv("AWS_REGION")
 	bucketName := os.Getenv("S3_BUCKET_NAME")
 
 	if awsAccessKey == "" || awsSecretKey == "" || awsRegion == "" || bucketName == "" {
+		logger.Warn("⚠️  AWS S3 not configured - using local storage for photos")
 		return fmt.Errorf("AWS credentials or bucket name not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, and S3_BUCKET_NAME")
 	}
+
+	logger.Debug("Loading AWS config for region: %s, bucket: %s", awsRegion, bucketName)
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(awsRegion),
@@ -41,6 +47,7 @@ func InitS3() error {
 		)),
 	)
 	if err != nil {
+		logger.Error("❌ Failed to load AWS config: %v", err)
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
@@ -50,6 +57,7 @@ func InitS3() error {
 		region:     awsRegion,
 	}
 
+	logger.Info("✅ AWS S3 service initialized (bucket: %s, region: %s)", bucketName, awsRegion)
 	return nil
 }
 
@@ -60,6 +68,8 @@ func GetS3Service() *S3Service {
 
 // UploadFile uploads a file to S3 and returns the URL
 func (s *S3Service) UploadFile(ctx context.Context, key string, body io.Reader, contentType string) (string, error) {
+	logger.Debug("📤 Uploading file to S3: %s (type: %s)", key, contentType)
+
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucketName),
 		Key:         aws.String(key),
@@ -68,24 +78,30 @@ func (s *S3Service) UploadFile(ctx context.Context, key string, body io.Reader, 
 		ACL:         "private", // Use private ACL for security
 	})
 	if err != nil {
+		logger.Error("❌ Failed to upload file to S3: %v", err)
 		return "", fmt.Errorf("failed to upload file to S3: %w", err)
 	}
 
 	// Return the S3 URL
 	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", s.bucketName, s.region, key)
+	logger.Info("✅ File uploaded to S3: %s", key)
 	return url, nil
 }
 
 // DeleteFile deletes a file from S3
 func (s *S3Service) DeleteFile(ctx context.Context, key string) error {
+	logger.Debug("🗑️  Deleting file from S3: %s", key)
+
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucketName),
 		Key:    aws.String(key),
 	})
 	if err != nil {
+		logger.Error("❌ Failed to delete file from S3: %v", err)
 		return fmt.Errorf("failed to delete file from S3: %w", err)
 	}
 
+	logger.Info("✅ File deleted from S3: %s", key)
 	return nil
 }
 

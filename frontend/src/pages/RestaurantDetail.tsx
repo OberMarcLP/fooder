@@ -174,104 +174,108 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
         </div>
       )}
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Camera className="w-5 h-5" />
-            Menu Photos
-          </h3>
-          <button
-            onClick={() => setShowPhotoUpload(!showPhotoUpload)}
-            className="btn btn-primary flex items-center gap-2 text-sm"
-          >
-            {showPhotoUpload ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                Hide Upload
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                Upload Photo
-              </>
-            )}
-          </button>
+      {!restaurant.is_suggestion && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Camera className="w-5 h-5" />
+              Menu Photos
+            </h3>
+            <button
+              onClick={() => setShowPhotoUpload(!showPhotoUpload)}
+              className="btn btn-primary flex items-center gap-2 text-sm"
+            >
+              {showPhotoUpload ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Hide Upload
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Upload Photo
+                </>
+              )}
+            </button>
+          </div>
+
+          {showPhotoUpload && (
+            <div className="card mb-4">
+              <PhotoUpload onUpload={handlePhotoUpload} />
+            </div>
+          )}
+
+          {loadingPhotos ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            </div>
+          ) : (
+            <PhotoGallery
+              photos={photos}
+              onCaptionUpdate={handleCaptionUpdate}
+              onDelete={handlePhotoDelete}
+            />
+          )}
         </div>
+      )}
 
-        {showPhotoUpload && (
-          <div className="card mb-4">
-            <PhotoUpload onUpload={handlePhotoUpload} />
+      {!restaurant.is_suggestion && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Reviews</h3>
+            <button
+              onClick={() => setShowRatingForm(true)}
+              className="btn btn-primary flex items-center gap-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Review
+            </button>
           </div>
-        )}
 
-        {loadingPhotos ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-          </div>
-        ) : (
-          <PhotoGallery
-            photos={photos}
-            onCaptionUpdate={handleCaptionUpdate}
-            onDelete={handlePhotoDelete}
-          />
-        )}
-      </div>
+          {showRatingForm && (
+            <div className="card mb-4">
+              <RatingForm onSubmit={handleAddRating} onCancel={() => setShowRatingForm(false)} />
+            </div>
+          )}
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Reviews</h3>
-          <button
-            onClick={() => setShowRatingForm(true)}
-            className="btn btn-primary flex items-center gap-2 text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add Review
-          </button>
-        </div>
-
-        {showRatingForm && (
-          <div className="card mb-4">
-            <RatingForm onSubmit={handleAddRating} onCancel={() => setShowRatingForm(false)} />
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-          </div>
-        ) : ratings.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-            No reviews yet. Be the first to review!
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {ratings.map((rating) => (
-              <div key={rating.id} className="card">
-                <div className="grid grid-cols-3 gap-4 mb-3">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Food</p>
-                    <StarRating rating={rating.food_rating} readonly size="sm" />
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            </div>
+          ) : ratings.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+              No reviews yet. Be the first to review!
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {ratings.map((rating) => (
+                <div key={rating.id} className="card">
+                  <div className="grid grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Food</p>
+                      <StarRating rating={rating.food_rating} readonly size="sm" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Service</p>
+                      <StarRating rating={rating.service_rating} readonly size="sm" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Ambiance</p>
+                      <StarRating rating={rating.ambiance_rating} readonly size="sm" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Service</p>
-                    <StarRating rating={rating.service_rating} readonly size="sm" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Ambiance</p>
-                    <StarRating rating={rating.ambiance_rating} readonly size="sm" />
-                  </div>
+                  {rating.comment && (
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">{rating.comment}</p>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                    {new Date(rating.created_at).toLocaleDateString()}
+                  </p>
                 </div>
-                {rating.comment && (
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">{rating.comment}</p>
-                )}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                  {new Date(rating.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

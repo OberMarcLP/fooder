@@ -37,7 +37,7 @@ function App() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-8">
                   <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                    Fooder
+                    The Nom Database
                   </span>
                   <div className="hidden lg:flex gap-1">
                     <NavLink

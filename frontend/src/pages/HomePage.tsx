@@ -7,6 +7,8 @@ import { RestaurantForm } from '../components/RestaurantForm';
 import { SuggestionForm } from '../components/SuggestionForm';
 import { ReviewConvertModal } from '../components/ReviewConvertModal';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { AlertDialog } from '../components/AlertDialog';
 import { RestaurantDetail } from './RestaurantDetail';
 
 interface HomePageProps {
@@ -22,6 +24,9 @@ export function HomePage({ filters }: HomePageProps) {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [reviewingSuggestion, setReviewingSuggestion] = useState<Restaurant | null>(null);
+  const [rejectingRestaurant, setRejectingRestaurant] = useState<Restaurant | null>(null);
+  const [deletingRestaurant, setDeletingRestaurant] = useState<Restaurant | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string>('');
 
   const fetchRestaurants = useCallback(async () => {
     try {
@@ -62,8 +67,13 @@ export function HomePage({ filters }: HomePageProps) {
       await createSuggestion(data);
       setShowAddSuggestionModal(false);
       fetchRestaurants();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create suggestion:', error);
+      if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
+        setAlertMessage('This restaurant already exists in the database. Please search for it instead.');
+      } else {
+        setAlertMessage('Failed to create suggestion. Please try again.');
+      }
     }
   };
 
@@ -78,11 +88,16 @@ export function HomePage({ filters }: HomePageProps) {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this restaurant?')) return;
+  const handleDelete = async () => {
+    setDeletingRestaurant(selectedRestaurant);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingRestaurant) return;
     try {
-      await deleteRestaurant(id);
+      await deleteRestaurant(deletingRestaurant.id);
       setSelectedRestaurant(null);
+      setDeletingRestaurant(null);
       fetchRestaurants();
     } catch (error) {
       console.error('Failed to delete restaurant:', error);
@@ -94,10 +109,15 @@ export function HomePage({ filters }: HomePageProps) {
   };
 
   const handleRejectSuggestion = async (restaurant: Restaurant) => {
-    if (!confirm(`Are you sure you want to reject "${restaurant.name}"?`)) return;
+    setRejectingRestaurant(restaurant);
+  };
+
+  const confirmReject = async () => {
+    if (!rejectingRestaurant) return;
     try {
-      if (restaurant.suggestion_id) {
-        await deleteSuggestion(restaurant.suggestion_id);
+      if (rejectingRestaurant.suggestion_id) {
+        await deleteSuggestion(rejectingRestaurant.suggestion_id);
+        setRejectingRestaurant(null);
         fetchRestaurants();
       }
     } catch (error) {
@@ -124,8 +144,18 @@ export function HomePage({ filters }: HomePageProps) {
       });
       setReviewingSuggestion(null);
       fetchRestaurants();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to convert suggestion:', error);
+      if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
+        setAlertMessage('This restaurant already exists in the database. The suggestion will be rejected.');
+        if (reviewingSuggestion?.suggestion_id) {
+          await deleteSuggestion(reviewingSuggestion.suggestion_id);
+          setReviewingSuggestion(null);
+          fetchRestaurants();
+        }
+      } else {
+        setAlertMessage('Failed to convert suggestion. Please try again.');
+      }
     }
   };
 
@@ -206,7 +236,7 @@ export function HomePage({ filters }: HomePageProps) {
               setEditingRestaurant(selectedRestaurant);
               setSelectedRestaurant(null);
             }}
-            onDelete={() => handleDelete(selectedRestaurant.id)}
+            onDelete={handleDelete}
             onRatingAdded={fetchRestaurants}
           />
         )}
@@ -220,6 +250,34 @@ export function HomePage({ filters }: HomePageProps) {
           restaurantName={reviewingSuggestion.name}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={rejectingRestaurant !== null}
+        onClose={() => setRejectingRestaurant(null)}
+        onConfirm={confirmReject}
+        title="Reject Suggestion"
+        message={`Are you sure you want to reject "${rejectingRestaurant?.name}"?`}
+        confirmText="Reject"
+        cancelText="Cancel"
+        confirmClassName="bg-red-600 hover:bg-red-700 text-white"
+      />
+
+      <ConfirmDialog
+        isOpen={deletingRestaurant !== null}
+        onClose={() => setDeletingRestaurant(null)}
+        onConfirm={confirmDelete}
+        title="Delete Restaurant"
+        message={`Are you sure you want to delete "${deletingRestaurant?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmClassName="bg-red-600 hover:bg-red-700 text-white"
+      />
+
+      <AlertDialog
+        isOpen={alertMessage !== ''}
+        onClose={() => setAlertMessage('')}
+        message={alertMessage}
+      />
     </div>
   );
 }

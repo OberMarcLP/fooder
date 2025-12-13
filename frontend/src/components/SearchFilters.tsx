@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MapPin, X, Loader2, Navigation } from 'lucide-react';
 import { Category, FoodType, RestaurantFilters, geocodeCities, GooglePlaceResult } from '../services/api';
+import { AlertDialog } from './AlertDialog';
 
 interface SearchFiltersProps {
   categories: Category[];
@@ -15,6 +16,7 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const hasActiveFilters = filters.category_id || (filters.food_type_ids && filters.food_type_ids.length > 0) || filters.radius;
 
@@ -85,7 +87,7 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      setAlertMessage('Geolocation is not supported by your browser');
       return;
     }
 
@@ -105,7 +107,7 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
       },
       (error) => {
         console.error('Error getting location:', error);
-        alert('Unable to get your location. Please search for a location instead.');
+        setAlertMessage('Unable to get your location. Please search for a location instead.');
         setGettingCurrentLocation(false);
       }
     );
@@ -266,6 +268,11 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
             )}
           </div>
       </div>
+      <AlertDialog
+        isOpen={alertMessage !== ''}
+        onClose={() => setAlertMessage('')}
+        message={alertMessage}
+      />
     </div>
   );
 }

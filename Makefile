@@ -21,8 +21,8 @@ db: ## Start PostgreSQL database
 	@echo "Starting PostgreSQL..."
 	@docker compose up -d db
 	@echo "Waiting for database to be ready..."
-	@until docker exec fooder-db pg_isready -U fooder -d fooder > /dev/null 2>&1; do sleep 1; done
-	@echo "Database ready at postgres://fooder:fooder_secret@localhost:5432/fooder"
+	@until docker exec nomdb-db pg_isready -U nomdb -d nomdb > /dev/null 2>&1; do sleep 1; done
+	@echo "Database ready at postgres://nomdb:nomdb_secret@localhost:5432/nomdb"
 
 db-stop: ## Stop PostgreSQL database
 	@docker compose stop db

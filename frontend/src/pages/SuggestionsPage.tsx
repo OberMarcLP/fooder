@@ -11,6 +11,8 @@ import {
 import { SuggestionForm } from '../components/SuggestionForm';
 import { Modal } from '../components/Modal';
 import { ReviewConvertModal } from '../components/ReviewConvertModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { AlertDialog } from '../components/AlertDialog';
 
 type StatusFilter = '' | 'pending' | 'approved' | 'tested' | 'rejected';
 
@@ -21,6 +23,8 @@ export function SuggestionsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [reviewingId, setReviewingId] = useState<number | null>(null);
   const [reviewingName, setReviewingName] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -44,7 +48,7 @@ export function SuggestionsPage() {
       fetchSuggestions();
     } catch (error) {
       console.error('Failed to create suggestion:', error);
-      alert('Failed to create suggestion');
+      setAlertMessage('Failed to create suggestion');
     }
   };
 
@@ -68,21 +72,27 @@ export function SuggestionsPage() {
       setReviewingId(null);
       setReviewingName('');
       fetchSuggestions();
-      alert('Suggestion converted to restaurant successfully!');
+      setAlertMessage('Suggestion converted to restaurant successfully!');
     } catch (error) {
       console.error('Failed to convert suggestion:', error);
-      alert('Failed to convert suggestion');
+      setAlertMessage('Failed to convert suggestion');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this suggestion?')) return;
+    setDeletingId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      await deleteSuggestion(id);
+      await deleteSuggestion(deletingId);
+      setDeletingId(null);
       fetchSuggestions();
     } catch (error) {
       console.error('Failed to delete suggestion:', error);
-      alert('Failed to delete suggestion');
+      setAlertMessage('Failed to delete suggestion');
+      setDeletingId(null);
     }
   };
 
@@ -242,6 +252,23 @@ export function SuggestionsPage() {
         }}
         onSubmit={handleReviewAndConvert}
         restaurantName={reviewingName}
+      />
+
+      <ConfirmDialog
+        isOpen={deletingId !== null}
+        onClose={() => setDeletingId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Suggestion"
+        message="Are you sure you want to delete this suggestion?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmClassName="bg-red-600 hover:bg-red-700 text-white"
+      />
+
+      <AlertDialog
+        isOpen={alertMessage !== ''}
+        onClose={() => setAlertMessage('')}
+        message={alertMessage}
       />
     </div>
   );

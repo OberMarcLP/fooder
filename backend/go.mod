@@ -1,4 +1,4 @@
-module github.com/fooder/backend
+module github.com/nomdb/backend
 
 go 1.23
 

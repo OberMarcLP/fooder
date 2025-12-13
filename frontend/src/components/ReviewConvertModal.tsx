@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { StarRating } from './StarRating';
+import { AlertDialog } from './AlertDialog';
 
 interface ReviewConvertModalProps {
   isOpen: boolean;
@@ -21,12 +22,13 @@ export function ReviewConvertModal({ isOpen, onClose, onSubmit, restaurantName }
   const [ambianceRating, setAmbianceRating] = useState(0);
   const [comment, setComment] = useState('');
   const [description, setDescription] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (foodRating === 0 || serviceRating === 0 || ambianceRating === 0) {
-      alert('Please provide all ratings');
+      setAlertMessage('Please provide all ratings');
       return;
     }
 
@@ -131,6 +133,11 @@ export function ReviewConvertModal({ isOpen, onClose, onSubmit, restaurantName }
           </button>
         </div>
       </form>
+      <AlertDialog
+        isOpen={alertMessage !== ''}
+        onClose={() => setAlertMessage('')}
+        message={alertMessage}
+      />
     </Modal>
   );
 }

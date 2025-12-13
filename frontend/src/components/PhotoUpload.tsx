@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
+import { AlertDialog } from './AlertDialog';
 
 interface PhotoUploadProps {
   onUpload: (file: File, caption: string) => Promise<void>;
@@ -11,6 +12,7 @@ export function PhotoUpload({ onUpload }: PhotoUploadProps) {
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
@@ -31,7 +33,7 @@ export function PhotoUpload({ onUpload }: PhotoUploadProps) {
   const handleFile = (selectedFile: File) => {
     const error = validateFile(selectedFile);
     if (error) {
-      alert(error);
+      setAlertMessage(error);
       return;
     }
 
@@ -90,7 +92,7 @@ export function PhotoUpload({ onUpload }: PhotoUploadProps) {
       handleClear();
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Failed to upload photo. Please try again.');
+      setAlertMessage('Failed to upload photo. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -180,6 +182,11 @@ export function PhotoUpload({ onUpload }: PhotoUploadProps) {
           </button>
         </div>
       )}
+      <AlertDialog
+        isOpen={alertMessage !== ''}
+        onClose={() => setAlertMessage('')}
+        message={alertMessage}
+      />
     </form>
   );
 }

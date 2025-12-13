@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fooder/backend/internal/database"
-	"github.com/fooder/backend/internal/models"
+	"github.com/nomdb/backend/internal/database"
+	"github.com/nomdb/backend/internal/models"
 	"github.com/gorilla/mux"
 )
 

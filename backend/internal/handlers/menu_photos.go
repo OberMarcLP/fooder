@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fooder/backend/internal/database"
-	"github.com/fooder/backend/internal/models"
-	"github.com/fooder/backend/internal/services"
+	"github.com/nomdb/backend/internal/database"
+	"github.com/nomdb/backend/internal/models"
+	"github.com/nomdb/backend/internal/services"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )

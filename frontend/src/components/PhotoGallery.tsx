@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { MenuPhoto } from '../services/api';
 import { Trash2, Edit2, Check, X } from 'lucide-react';
+import { ConfirmDialog } from './ConfirmDialog';
+import { AlertDialog } from './AlertDialog';
 
 interface PhotoGalleryProps {
   photos: MenuPhoto[];
@@ -11,6 +13,8 @@ interface PhotoGalleryProps {
 export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGalleryProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editCaption, setEditCaption] = useState('');
+  const [deletingPhotoId, setDeletingPhotoId] = useState<number | null>(null);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const handleStartEdit = (photo: MenuPhoto) => {
     setEditingId(photo.id);
@@ -24,7 +28,7 @@ export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGallery
 
   const handleSaveEdit = async (id: number) => {
     if (!editCaption.trim()) {
-      alert('Caption cannot be empty');
+      setAlertMessage('Caption cannot be empty');
       return;
     }
 
@@ -34,18 +38,23 @@ export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGallery
       setEditCaption('');
     } catch (error) {
       console.error('Failed to update caption:', error);
-      alert('Failed to update caption');
+      setAlertMessage('Failed to update caption');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this photo?')) return;
+    setDeletingPhotoId(id);
+  };
 
+  const confirmDelete = async () => {
+    if (!deletingPhotoId) return;
     try {
-      await onDelete(id);
+      await onDelete(deletingPhotoId);
+      setDeletingPhotoId(null);
     } catch (error) {
       console.error('Failed to delete photo:', error);
-      alert('Failed to delete photo');
+      setAlertMessage('Failed to delete photo');
+      setDeletingPhotoId(null);
     }
   };
 
@@ -135,6 +144,21 @@ export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGallery
           </div>
         </div>
       ))}
+      <ConfirmDialog
+        isOpen={deletingPhotoId !== null}
+        onClose={() => setDeletingPhotoId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Photo"
+        message="Are you sure you want to delete this photo?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmClassName="bg-red-600 hover:bg-red-700 text-white"
+      />
+      <AlertDialog
+        isOpen={alertMessage !== ''}
+        onClose={() => setAlertMessage('')}
+        message={alertMessage}
+      />
     </div>
   );
 }

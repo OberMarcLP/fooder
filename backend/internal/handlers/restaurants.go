@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fooder/backend/internal/database"
-	"github.com/fooder/backend/internal/models"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/nomdb/backend/internal/database"
+	"github.com/nomdb/backend/internal/logger"
+	"github.com/nomdb/backend/internal/models"
 	"github.com/gorilla/mux"
 )
 
@@ -465,6 +467,21 @@ func CreateRestaurant(w http.ResponseWriter, r *http.Request) {
 		&rest.GooglePlaceID, &rest.CategoryID, &rest.CreatedAt, &rest.UpdatedAt,
 	)
 	if err != nil {
+		// Check if it's a unique constraint violation
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			if pgErr.Code == "23505" { // unique_violation
+				logger.Warn("Duplicate restaurant creation attempt: %s", req.Name)
+				if strings.Contains(pgErr.ConstraintName, "google_place_id") {
+					http.Error(w, "A restaurant with this Google Place ID already exists", http.StatusConflict)
+				} else if strings.Contains(pgErr.ConstraintName, "name_address") {
+					http.Error(w, "A restaurant with this name and address already exists", http.StatusConflict)
+				} else {
+					http.Error(w, "This restaurant already exists", http.StatusConflict)
+				}
+				return
+			}
+		}
+		logger.Error("Failed to create restaurant: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

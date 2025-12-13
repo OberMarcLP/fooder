@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/fooder/backend/internal/services"
+	"github.com/nomdb/backend/internal/services"
 	"github.com/gorilla/mux"
 )
 

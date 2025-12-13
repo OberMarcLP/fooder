@@ -60,13 +60,7 @@ export function RestaurantCard({ restaurant, onClick, onReview, onReject }: Rest
         </div>
       )}
 
-        {restaurant.is_suggestion ? (
-          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-yellow-700 dark:text-yellow-400 italic">
-              Not yet rated - Try it and add your review!
-            </p>
-          </div>
-        ) : restaurant.avg_rating && (
+        {!restaurant.is_suggestion && restaurant.avg_rating && (
           <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
             <StarRating rating={Math.round(restaurant.avg_rating.overall)} readonly size="sm" />
             <span className="text-sm text-gray-600 dark:text-gray-400">

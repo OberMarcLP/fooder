@@ -7,7 +7,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/fooder/backend/internal/models"
+	"github.com/nomdb/backend/internal/logger"
+	"github.com/nomdb/backend/internal/models"
 )
 
 type GoogleMapsService struct {
@@ -15,8 +16,14 @@ type GoogleMapsService struct {
 }
 
 func NewGoogleMapsService() *GoogleMapsService {
+	apiKey := os.Getenv("GOOGLE_MAPS_API_KEY")
+	if apiKey == "" {
+		logger.Warn("⚠️  Google Maps API key not configured - map features will be disabled")
+	} else {
+		logger.Info("🗺️  Google Maps service initialized")
+	}
 	return &GoogleMapsService{
-		apiKey: os.Getenv("GOOGLE_MAPS_API_KEY"),
+		apiKey: apiKey,
 	}
 }
 
@@ -55,8 +62,11 @@ type PlaceDetailsResponse struct {
 
 func (s *GoogleMapsService) SearchPlaces(query string) ([]models.GooglePlaceResult, error) {
 	if s.apiKey == "" {
+		logger.Error("Google Maps API key not configured")
 		return nil, fmt.Errorf("Google Maps API key not configured")
 	}
+
+	logger.Debug("🔍 Searching Google Maps for: %s", query)
 
 	baseURL := "https://maps.googleapis.com/maps/api/place/textsearch/json"
 	params := url.Values{}
@@ -66,16 +76,19 @@ func (s *GoogleMapsService) SearchPlaces(query string) ([]models.GooglePlaceResu
 
 	resp, err := http.Get(baseURL + "?" + params.Encode())
 	if err != nil {
+		logger.Error("Failed to search Google Maps: %v", err)
 		return nil, fmt.Errorf("failed to search places: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var searchResp PlacesSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
+		logger.Error("Failed to decode Google Maps response: %v", err)
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if searchResp.Status != "OK" && searchResp.Status != "ZERO_RESULTS" {
+		logger.Error("Google Maps API error: %s", searchResp.Status)
 		return nil, fmt.Errorf("Google Maps API error: %s", searchResp.Status)
 	}
 
@@ -90,6 +103,7 @@ func (s *GoogleMapsService) SearchPlaces(query string) ([]models.GooglePlaceResu
 		})
 	}
 
+	logger.Info("✅ Found %d places for query: %s", len(results), query)
 	return results, nil
 }
 
@@ -179,8 +193,11 @@ func (s *GoogleMapsService) GeocodeCities(query string) ([]models.GooglePlaceRes
 
 func (s *GoogleMapsService) GetPlaceDetails(placeID string) (*models.GooglePlaceResult, error) {
 	if s.apiKey == "" {
+		logger.Error("Google Maps API key not configured")
 		return nil, fmt.Errorf("Google Maps API key not configured")
 	}
+
+	logger.Debug("📍 Fetching place details for: %s", placeID)
 
 	baseURL := "https://maps.googleapis.com/maps/api/place/details/json"
 	params := url.Values{}
@@ -190,16 +207,19 @@ func (s *GoogleMapsService) GetPlaceDetails(placeID string) (*models.GooglePlace
 
 	resp, err := http.Get(baseURL + "?" + params.Encode())
 	if err != nil {
+		logger.Error("Failed to get place details: %v", err)
 		return nil, fmt.Errorf("failed to get place details: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var detailsResp PlaceDetailsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&detailsResp); err != nil {
+		logger.Error("Failed to decode place details response: %v", err)
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if detailsResp.Status != "OK" {
+		logger.Error("Google Maps API error for place details: %s", detailsResp.Status)
 		return nil, fmt.Errorf("Google Maps API error: %s", detailsResp.Status)
 	}
 
@@ -207,6 +227,8 @@ func (s *GoogleMapsService) GetPlaceDetails(placeID string) (*models.GooglePlace
 	if phone == "" {
 		phone = detailsResp.Result.FormattedPhoneNumber
 	}
+
+	logger.Info("✅ Retrieved place details: %s", detailsResp.Result.Name)
 
 	return &models.GooglePlaceResult{
 		PlaceID:   detailsResp.Result.PlaceID,

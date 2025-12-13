@@ -6,9 +6,12 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/fooder/backend/internal/database"
-	"github.com/fooder/backend/internal/models"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/nomdb/backend/internal/database"
+	"github.com/nomdb/backend/internal/logger"
+	"github.com/nomdb/backend/internal/models"
 	"github.com/gorilla/mux"
 )
 
@@ -176,6 +179,32 @@ func CreateSuggestion(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
+	// Check if restaurant already exists in the restaurants table
+	var existingRestaurantID int
+	var checkQuery string
+	var checkArgs []interface{}
+
+	if req.GooglePlaceID != nil && *req.GooglePlaceID != "" {
+		// Check by Google Place ID first
+		checkQuery = "SELECT id FROM restaurants WHERE google_place_id = $1"
+		checkArgs = []interface{}{*req.GooglePlaceID}
+	} else if req.Address != nil && *req.Address != "" {
+		// Check by name and address combination
+		checkQuery = "SELECT id FROM restaurants WHERE LOWER(name) = LOWER($1) AND LOWER(address) = LOWER($2)"
+		checkArgs = []interface{}{req.Name, *req.Address}
+	}
+
+	if checkQuery != "" {
+		err := database.GetPool().QueryRow(ctx, checkQuery, checkArgs...).Scan(&existingRestaurantID)
+		if err == nil {
+			// Restaurant already exists
+			logger.Warn("Attempt to create suggestion for existing restaurant: %s (ID: %d)", req.Name, existingRestaurantID)
+			http.Error(w, "This restaurant already exists in the database. Please search for it instead.", http.StatusConflict)
+			return
+		}
+		// If error is "no rows", that's fine - restaurant doesn't exist
+	}
+
 	var sug models.RestaurantSuggestion
 	err := database.GetPool().QueryRow(ctx,
 		`INSERT INTO restaurant_suggestions (name, address, phone, website, latitude, longitude, google_place_id, suggested_category_id, notes)
@@ -187,6 +216,21 @@ func CreateSuggestion(w http.ResponseWriter, r *http.Request) {
 		&sug.GooglePlaceID, &sug.SuggestedCategoryID, &sug.Notes, &sug.Status, &sug.CreatedAt, &sug.UpdatedAt,
 	)
 	if err != nil {
+		// Check if it's a unique constraint violation
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			if pgErr.Code == "23505" { // unique_violation
+				logger.Warn("Duplicate suggestion creation attempt: %s", req.Name)
+				if strings.Contains(pgErr.ConstraintName, "google_place_id") {
+					http.Error(w, "A suggestion for this restaurant (Google Place ID) already exists", http.StatusConflict)
+				} else if strings.Contains(pgErr.ConstraintName, "name_address") {
+					http.Error(w, "A suggestion for this restaurant (name and address) already exists", http.StatusConflict)
+				} else {
+					http.Error(w, "This suggestion already exists", http.StatusConflict)
+				}
+				return
+			}
+		}
+		logger.Error("Failed to create suggestion: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
