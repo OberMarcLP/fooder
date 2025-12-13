@@ -166,11 +166,54 @@ Services will show as `(healthy)` when ready. The frontend waits for the backend
 
 ### Running locally without Docker
 
+You can use the Makefile for convenient local development commands:
+
+#### Using Makefile (Recommended)
+
+**View all available commands:**
+```bash
+make help
+```
+
+**Start local development (3 separate terminals):**
+
+Terminal 1 - Start database:
+```bash
+make db
+```
+
+Terminal 2 - Start backend:
+```bash
+make backend
+```
+
+Terminal 3 - Start frontend:
+```bash
+make frontend
+```
+
+**Other useful commands:**
+```bash
+make install      # Install frontend dependencies
+make db-stop      # Stop the database
+make clean        # Stop and remove database container and volume
+```
+
+**Note:** The Makefile automatically loads environment variables from your `.env` file.
+
+#### Manual Setup (Without Makefile)
+
+**Database only:**
+```bash
+docker compose up db
+```
+
 **Backend:**
 ```bash
 cd backend
 export DATABASE_URL="postgres://nomdb:nomdb_secret@localhost:5432/nomdb?sslmode=disable"
 export GOOGLE_MAPS_API_KEY="your_key"
+export DEBUG=true  # Optional: enable debug logging
 go run ./cmd/server
 ```
 
@@ -179,11 +222,6 @@ go run ./cmd/server
 cd frontend
 npm install
 npm run dev
-```
-
-**Database only:**
-```bash
-docker compose up db
 ```
 
 ## API Endpoints
