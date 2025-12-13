@@ -14,7 +14,6 @@ export function FoodTypesPage() {
       const data = await getFoodTypes();
       setFoodTypes(data);
     } catch (error) {
-      console.error('Failed to fetch food types:', error);
     } finally {
       setLoading(false);
     }
@@ -32,7 +31,6 @@ export function FoodTypesPage() {
       setNewName('');
       fetchFoodTypes();
     } catch (error) {
-      console.error('Failed to create food type:', error);
     }
   };
 
@@ -44,7 +42,6 @@ export function FoodTypesPage() {
       setEditName('');
       fetchFoodTypes();
     } catch (error) {
-      console.error('Failed to update food type:', error);
     }
   };
 
@@ -54,7 +51,6 @@ export function FoodTypesPage() {
       await deleteFoodType(id);
       fetchFoodTypes();
     } catch (error) {
-      console.error('Failed to delete food type:', error);
     }
   };
 

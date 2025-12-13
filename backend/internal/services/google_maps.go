@@ -44,13 +44,13 @@ type PlacesSearchResponse struct {
 
 type PlaceDetailsResponse struct {
 	Result struct {
-		PlaceID                string `json:"place_id"`
-		Name                   string `json:"name"`
-		FormattedAddress       string `json:"formatted_address"`
-		FormattedPhoneNumber   string `json:"formatted_phone_number"`
+		PlaceID                  string `json:"place_id"`
+		Name                     string `json:"name"`
+		FormattedAddress         string `json:"formatted_address"`
+		FormattedPhoneNumber     string `json:"formatted_phone_number"`
 		InternationalPhoneNumber string `json:"international_phone_number"`
-		Website                string `json:"website"`
-		Geometry               struct {
+		Website                  string `json:"website"`
+		Geometry                 struct {
 			Location struct {
 				Lat float64 `json:"lat"`
 				Lng float64 `json:"lng"`
@@ -126,8 +126,8 @@ func (s *GoogleMapsService) GeocodeCities(query string) ([]models.GooglePlaceRes
 
 	var autoResp struct {
 		Predictions []struct {
-			PlaceID     string `json:"place_id"`
-			Description string `json:"description"`
+			PlaceID              string `json:"place_id"`
+			Description          string `json:"description"`
 			StructuredFormatting struct {
 				MainText      string `json:"main_text"`
 				SecondaryText string `json:"secondary_text"`

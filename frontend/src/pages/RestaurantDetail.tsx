@@ -27,7 +27,6 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
       const data = await getRatings(restaurant.id);
       setRatings(data);
     } catch (error) {
-      console.error('Failed to fetch ratings:', error);
     } finally {
       setLoading(false);
     }
@@ -38,7 +37,6 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
       const data = await getMenuPhotos(restaurant.id);
       setPhotos(data);
     } catch (error) {
-      console.error('Failed to fetch photos:', error);
     } finally {
       setLoadingPhotos(false);
     }
@@ -61,7 +59,6 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
       fetchRatings();
       onRatingAdded();
     } catch (error) {
-      console.error('Failed to create rating:', error);
     }
   };
 

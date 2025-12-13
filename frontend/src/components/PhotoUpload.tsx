@@ -91,7 +91,6 @@ export function PhotoUpload({ onUpload }: PhotoUploadProps) {
       await onUpload(file, caption);
       handleClear();
     } catch (error) {
-      console.error('Upload failed:', error);
       setAlertMessage('Failed to upload photo. Please try again.');
     } finally {
       setUploading(false);

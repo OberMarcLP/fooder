@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/nomdb/backend/internal/services"
 	"github.com/gorilla/mux"
+	"github.com/nomdb/backend/internal/services"
 )
 
 var mapsService = services.NewGoogleMapsService()

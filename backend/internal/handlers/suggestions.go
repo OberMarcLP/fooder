@@ -3,16 +3,15 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nomdb/backend/internal/database"
 	"github.com/nomdb/backend/internal/logger"
 	"github.com/nomdb/backend/internal/models"
-	"github.com/gorilla/mux"
 )
 
 // Helper functions for suggestion food types
@@ -241,7 +240,11 @@ func CreateSuggestion(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		foodTypes, _ := getFoodTypesForSuggestion(ctx, sug.ID)
+		foodTypes, err := getFoodTypesForSuggestion(ctx, sug.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		sug.FoodTypes = foodTypes
 	}
 
@@ -289,7 +292,11 @@ func UpdateSuggestionStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	foodTypes, _ := getFoodTypesForSuggestion(ctx, sug.ID)
+	foodTypes, err := getFoodTypesForSuggestion(ctx, sug.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	sug.FoodTypes = foodTypes
 
 	w.Header().Set("Content-Type", "application/json")
@@ -355,7 +362,10 @@ func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Copy food types from suggestion to restaurant
-	foodTypes, _ := getFoodTypesForSuggestion(ctx, sug.ID)
+	foodTypes, err := getFoodTypesForSuggestion(ctx, sug.ID)
+	if err != nil {
+		logger.Warn("Failed to get food types for suggestion %d: %v", sug.ID, err)
+	}
 	if len(foodTypes) > 0 {
 		var foodTypeIDs []int
 		for _, ft := range foodTypes {
@@ -379,7 +389,7 @@ func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
 		restaurantID, req.FoodRating, req.ServiceRating, req.AmbianceRating, req.Comment,
 	)
 	if err != nil {
-		log.Printf("Warning: Failed to create initial rating for restaurant %d: %v", restaurantID, err)
+		logger.Warn("Failed to create initial rating for restaurant %d: %v", restaurantID, err)
 	}
 
 	// Delete the suggestion after successful conversion
@@ -387,7 +397,7 @@ func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
 		"DELETE FROM restaurant_suggestions WHERE id = $1", id)
 	if err != nil {
 		// Non-fatal, but log it
-		log.Printf("Warning: Failed to delete converted suggestion %d: %v", id, err)
+		logger.Warn("Failed to delete converted suggestion %d: %v", id, err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

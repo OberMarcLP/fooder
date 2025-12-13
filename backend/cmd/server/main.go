@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/nomdb/backend/internal/database"
 	"github.com/nomdb/backend/internal/handlers"
 	"github.com/nomdb/backend/internal/logger"
 	"github.com/nomdb/backend/internal/middleware"
 	"github.com/nomdb/backend/internal/services"
-	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 )

@@ -37,7 +37,6 @@ export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGallery
       setEditingId(null);
       setEditCaption('');
     } catch (error) {
-      console.error('Failed to update caption:', error);
       setAlertMessage('Failed to update caption');
     }
   };
@@ -52,7 +51,6 @@ export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGallery
       await onDelete(deletingPhotoId);
       setDeletingPhotoId(null);
     } catch (error) {
-      console.error('Failed to delete photo:', error);
       setAlertMessage('Failed to delete photo');
       setDeletingPhotoId(null);
     }

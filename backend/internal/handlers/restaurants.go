@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nomdb/backend/internal/database"
 	"github.com/nomdb/backend/internal/logger"
 	"github.com/nomdb/backend/internal/models"
-	"github.com/gorilla/mux"
 )
 
 func getFoodTypesForRestaurant(ctx context.Context, restaurantID int) ([]models.FoodType, error) {

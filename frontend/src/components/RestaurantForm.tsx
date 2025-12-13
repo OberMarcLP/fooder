@@ -56,7 +56,6 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
         website: details.website || '',
       }));
     } catch (error) {
-      console.error('Failed to fetch place details:', error);
     } finally {
       setLoadingDetails(false);
     }

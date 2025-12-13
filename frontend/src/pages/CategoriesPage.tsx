@@ -14,7 +14,6 @@ export function CategoriesPage() {
       const data = await getCategories();
       setCategories(data);
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
     } finally {
       setLoading(false);
     }
@@ -32,7 +31,6 @@ export function CategoriesPage() {
       setNewName('');
       fetchCategories();
     } catch (error) {
-      console.error('Failed to create category:', error);
     }
   };
 
@@ -44,7 +42,6 @@ export function CategoriesPage() {
       setEditName('');
       fetchCategories();
     } catch (error) {
-      console.error('Failed to update category:', error);
     }
   };
 
@@ -54,7 +51,6 @@ export function CategoriesPage() {
       await deleteCategory(id);
       fetchCategories();
     } catch (error) {
-      console.error('Failed to delete category:', error);
     }
   };
 

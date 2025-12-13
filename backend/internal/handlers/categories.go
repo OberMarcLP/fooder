@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/nomdb/backend/internal/database"
 	"github.com/nomdb/backend/internal/models"
-	"github.com/gorilla/mux"
 )
 
 func GetCategories(w http.ResponseWriter, r *http.Request) {

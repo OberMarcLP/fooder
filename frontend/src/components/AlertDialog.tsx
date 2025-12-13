@@ -11,7 +11,7 @@ interface AlertDialogProps {
 export function AlertDialog({
   isOpen,
   onClose,
-  title = 'localhost:3000',
+  title = 'Alert',
   message,
   buttonText = 'OK',
 }: AlertDialogProps) {

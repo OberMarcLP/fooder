@@ -33,7 +33,6 @@ export function HomePage({ filters }: HomePageProps) {
       const data = await getRestaurants(filters);
       setRestaurants(data);
     } catch (error) {
-      console.error('Failed to fetch restaurants:', error);
     } finally {
       setLoading(false);
     }
@@ -55,7 +54,6 @@ export function HomePage({ filters }: HomePageProps) {
           // Clear the location state
           navigate(location.pathname, { replace: true });
         } catch (error) {
-          console.error('Failed to fetch restaurant:', error);
         }
       };
       fetchSelectedRestaurant();
@@ -68,7 +66,6 @@ export function HomePage({ filters }: HomePageProps) {
       setShowAddSuggestionModal(false);
       fetchRestaurants();
     } catch (error: any) {
-      console.error('Failed to create suggestion:', error);
       if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
         setAlertMessage('This restaurant already exists in the database. Please search for it instead.');
       } else {
@@ -84,7 +81,6 @@ export function HomePage({ filters }: HomePageProps) {
       setEditingRestaurant(null);
       fetchRestaurants();
     } catch (error) {
-      console.error('Failed to update restaurant:', error);
     }
   };
 
@@ -100,7 +96,6 @@ export function HomePage({ filters }: HomePageProps) {
       setDeletingRestaurant(null);
       fetchRestaurants();
     } catch (error) {
-      console.error('Failed to delete restaurant:', error);
     }
   };
 
@@ -121,7 +116,6 @@ export function HomePage({ filters }: HomePageProps) {
         fetchRestaurants();
       }
     } catch (error) {
-      console.error('Failed to reject suggestion:', error);
     }
   };
 
@@ -145,7 +139,6 @@ export function HomePage({ filters }: HomePageProps) {
       setReviewingSuggestion(null);
       fetchRestaurants();
     } catch (error: any) {
-      console.error('Failed to convert suggestion:', error);
       if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
         setAlertMessage('This restaurant already exists in the database. The suggestion will be rejected.');
         if (reviewingSuggestion?.suggestion_id) {

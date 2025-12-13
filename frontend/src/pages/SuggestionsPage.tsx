@@ -31,7 +31,6 @@ export function SuggestionsPage() {
       const data = await getSuggestions(statusFilter);
       setSuggestions(data);
     } catch (error) {
-      console.error('Failed to fetch suggestions:', error);
     } finally {
       setLoading(false);
     }
@@ -47,7 +46,6 @@ export function SuggestionsPage() {
       setShowAddModal(false);
       fetchSuggestions();
     } catch (error) {
-      console.error('Failed to create suggestion:', error);
       setAlertMessage('Failed to create suggestion');
     }
   };
@@ -74,7 +72,6 @@ export function SuggestionsPage() {
       fetchSuggestions();
       setAlertMessage('Suggestion converted to restaurant successfully!');
     } catch (error) {
-      console.error('Failed to convert suggestion:', error);
       setAlertMessage('Failed to convert suggestion');
     }
   };
@@ -90,7 +87,6 @@ export function SuggestionsPage() {
       setDeletingId(null);
       fetchSuggestions();
     } catch (error) {
-      console.error('Failed to delete suggestion:', error);
       setAlertMessage('Failed to delete suggestion');
       setDeletingId(null);
     }

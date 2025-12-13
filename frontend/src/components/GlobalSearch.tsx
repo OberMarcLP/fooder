@@ -40,7 +40,6 @@ export function GlobalSearch({ categories, foodTypes, filters, onFiltersChange }
           setResults(data);
           setIsOpen(true);
         } catch (error) {
-          console.error('Search failed:', error);
           setResults([]);
         } finally {
           setIsLoading(false);

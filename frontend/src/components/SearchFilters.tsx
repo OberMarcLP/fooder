@@ -33,7 +33,6 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
         const results = await geocodeCities(locationSearch);
         setLocationResults(results);
       } catch (error) {
-        console.error('Failed to search locations:', error);
       } finally {
         setSearchingLocation(false);
       }
@@ -106,7 +105,6 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
         setGettingCurrentLocation(false);
       },
       (error) => {
-        console.error('Error getting location:', error);
         setAlertMessage('Unable to get your location. Please search for a location instead.');
         setGettingCurrentLocation(false);
       }

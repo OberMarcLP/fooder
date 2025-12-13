@@ -22,7 +22,6 @@ function App() {
         setCategories(cats);
         setFoodTypes(fts);
       } catch (error) {
-        console.error('Failed to load filter data:', error);
       }
     };
     loadFiltersData();
