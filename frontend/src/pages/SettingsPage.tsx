@@ -1,0 +1,299 @@
+import { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, Loader2, Tag, Utensils, Settings as SettingsIcon } from 'lucide-react';
+import { Category, FoodType, getCategories, getFoodTypes, createCategory, updateCategory, deleteCategory, createFoodType, updateFoodType, deleteFoodType } from '../services/api';
+
+export function SettingsPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [foodTypes, setFoodTypes] = useState<FoodType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+
+  const [newFoodTypeName, setNewFoodTypeName] = useState('');
+  const [editingFoodTypeId, setEditingFoodTypeId] = useState<number | null>(null);
+  const [editFoodTypeName, setEditFoodTypeName] = useState('');
+
+  const fetchData = async () => {
+    try {
+      const [cats, fts] = await Promise.all([getCategories(), getFoodTypes()]);
+      setCategories(cats);
+      setFoodTypes(fts);
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Category handlers
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    try {
+      await createCategory(newCategoryName);
+      setNewCategoryName('');
+      fetchData();
+    } catch (error) {
+    }
+  };
+
+  const handleUpdateCategory = async (id: number) => {
+    if (!editCategoryName.trim()) return;
+    try {
+      await updateCategory(id, editCategoryName);
+      setEditingCategoryId(null);
+      setEditCategoryName('');
+      fetchData();
+    } catch (error) {
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+    try {
+      await deleteCategory(id);
+      fetchData();
+    } catch (error) {
+    }
+  };
+
+  const startEditCategory = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditCategoryName(category.name);
+  };
+
+  // Food Type handlers
+  const handleCreateFoodType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFoodTypeName.trim()) return;
+    try {
+      await createFoodType(newFoodTypeName);
+      setNewFoodTypeName('');
+      fetchData();
+    } catch (error) {
+    }
+  };
+
+  const handleUpdateFoodType = async (id: number) => {
+    if (!editFoodTypeName.trim()) return;
+    try {
+      await updateFoodType(id, editFoodTypeName);
+      setEditingFoodTypeId(null);
+      setEditFoodTypeName('');
+      fetchData();
+    } catch (error) {
+    }
+  };
+
+  const handleDeleteFoodType = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this food type?')) return;
+    try {
+      await deleteFoodType(id);
+      fetchData();
+    } catch (error) {
+    }
+  };
+
+  const startEditFoodType = (foodType: FoodType) => {
+    setEditingFoodTypeId(foodType.id);
+    setEditFoodTypeName(foodType.name);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 backdrop-blur-sm">
+          <SettingsIcon className="w-6 h-6 text-purple-500" />
+        </div>
+        <h1 className="text-3xl font-bold text-gradient">Settings</h1>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Categories Section */}
+        <div className="card-glass p-6 space-y-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-blue-500/20 backdrop-blur-sm">
+              <Tag className="w-5 h-5 text-blue-500" />
+            </div>
+            <h2 className="text-xl font-bold">Categories</h2>
+          </div>
+
+          <form onSubmit={handleCreateCategory} className="flex gap-2">
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="New category name..."
+              className="input-glass flex-1"
+            />
+            <button type="submit" className="btn-glass-primary flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Add
+            </button>
+          </form>
+
+          {categories.length === 0 ? (
+            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+              No categories yet. Add your first category above.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {categories.map((category) => (
+                <div key={category.id} className="card-glass p-4 flex items-center justify-between group hover:shadow-lg transition-all duration-200">
+                  {editingCategoryId === category.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={editCategoryName}
+                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        className="input-glass flex-1"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleUpdateCategory(category.id)}
+                        className="btn-glass-success px-3 py-2"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingCategoryId(null);
+                          setEditCategoryName('');
+                        }}
+                        className="btn-glass px-3 py-2"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <Tag className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <span className="font-medium">{category.name}</span>
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => startEditCategory(category)}
+                          className="p-2 rounded-lg btn-glass hover:bg-blue-500/20"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(category.id)}
+                          className="p-2 rounded-lg btn-glass hover:bg-red-500/20"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Food Types Section */}
+        <div className="card-glass p-6 space-y-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-green-500/20 backdrop-blur-sm">
+              <Utensils className="w-5 h-5 text-green-500" />
+            </div>
+            <h2 className="text-xl font-bold">Food Types</h2>
+          </div>
+
+          <form onSubmit={handleCreateFoodType} className="flex gap-2">
+            <input
+              type="text"
+              value={newFoodTypeName}
+              onChange={(e) => setNewFoodTypeName(e.target.value)}
+              placeholder="New food type name..."
+              className="input-glass flex-1"
+            />
+            <button type="submit" className="btn-glass-primary flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Add
+            </button>
+          </form>
+
+          {foodTypes.length === 0 ? (
+            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+              No food types yet. Add your first food type above.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {foodTypes.map((foodType) => (
+                <div key={foodType.id} className="card-glass p-4 flex items-center justify-between group hover:shadow-lg transition-all duration-200">
+                  {editingFoodTypeId === foodType.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={editFoodTypeName}
+                        onChange={(e) => setEditFoodTypeName(e.target.value)}
+                        className="input-glass flex-1"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleUpdateFoodType(foodType.id)}
+                        className="btn-glass-success px-3 py-2"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingFoodTypeId(null);
+                          setEditFoodTypeName('');
+                        }}
+                        className="btn-glass px-3 py-2"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                          <Utensils className="w-4 h-4 text-green-500" />
+                        </div>
+                        <span className="font-medium">{foodType.name}</span>
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => startEditFoodType(foodType)}
+                          className="p-2 rounded-lg btn-glass hover:bg-blue-500/20"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFoodType(foodType.id)}
+                          className="p-2 rounded-lg btn-glass hover:bg-red-500/20"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

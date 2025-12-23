@@ -109,7 +109,7 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
           type="text"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="input"
+          className="input-glass"
           required
         />
       </div>
@@ -119,7 +119,7 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
         <textarea
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="input min-h-[100px]"
+          className="input-glass min-h-[100px]"
           rows={3}
         />
       </div>
@@ -130,7 +130,7 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
           type="text"
           value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          className="input"
+          className="input-glass"
         />
       </div>
 
@@ -141,7 +141,7 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
             type="tel"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="input"
+            className="input-glass"
             placeholder="+1 234 567 8900"
           />
         </div>
@@ -151,7 +151,7 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
             type="url"
             value={formData.website}
             onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-            className="input"
+            className="input-glass"
             placeholder="https://..."
           />
         </div>
@@ -167,7 +167,7 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
               category_id: e.target.value ? parseInt(e.target.value) : null,
             })
           }
-          className="input"
+          className="input-glass"
         >
           <option value="">Select category</option>
           {categories.map((cat) => (
@@ -186,7 +186,7 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
             {selectedFoodTypes.map(ft => (
               <span
                 key={ft.id}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm"
+                className="badge-food-type"
               >
                 {ft.name}
                 <button
@@ -201,14 +201,14 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-300 dark:border-gray-600 rounded-lg">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-3 border border-white/30 dark:border-white/10 rounded-xl bg-white/20 dark:bg-gray-700/20 backdrop-blur-sm">
           {foodTypes.map((ft) => (
             <label
               key={ft.id}
-              className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
+              className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all duration-200 ${
                 formData.food_type_ids.includes(ft.id)
-                  ? 'bg-green-100 dark:bg-green-900/50'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-green-500/20 dark:bg-green-500/30 border border-green-500/40'
+                  : 'hover:bg-white/40 dark:hover:bg-white/10 border border-transparent'
               }`}
             >
               <input
@@ -230,10 +230,10 @@ export function RestaurantForm({ restaurant, onSubmit, onCancel }: RestaurantFor
       )}
 
       <div className="flex gap-3 pt-4">
-        <button type="submit" className="btn btn-primary flex-1">
+        <button type="submit" className="btn-glass-primary flex-1">
           {restaurant ? 'Update Restaurant' : 'Add Restaurant'}
         </button>
-        <button type="button" onClick={onCancel} className="btn btn-secondary">
+        <button type="button" onClick={onCancel} className="btn-glass">
           Cancel
         </button>
       </div>

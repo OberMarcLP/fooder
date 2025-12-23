@@ -7,10 +7,29 @@
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  @apply bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-blue-950 dark:to-purple-950;
+  @apply text-gray-900 dark:text-gray-100;
   min-height: 100vh;
+  position: relative;
 }
 
+body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+body.dark::before {
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+}
+
+/* Legacy button classes (kept for backward compatibility) */
 .btn {
   @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
 }
@@ -37,4 +56,151 @@ body {
 
 .label {
   @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+}
+
+/* Glassmorphic Card Components */
+.card-glass {
+  @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl;
+  @apply border border-white/20 dark:border-white/10;
+  @apply rounded-2xl shadow-xl;
+  @apply transition-all duration-300;
+}
+
+.card-glass-strong {
+  @apply bg-white/90 dark:bg-gray-800/90 backdrop-blur-2xl;
+  @apply border border-white/30 dark:border-white/15;
+  @apply rounded-2xl shadow-2xl;
+}
+
+/* Glassmorphic Buttons */
+.btn-glass {
+  @apply px-5 py-2.5 rounded-xl font-medium;
+  @apply transition-all duration-300 backdrop-blur-lg border;
+  @apply bg-white/20 hover:bg-white/30 dark:bg-white/10 dark:hover:bg-white/20;
+  @apply border-white/30 hover:border-white/50 dark:border-white/20 dark:hover:border-white/30;
+  @apply hover:shadow-lg hover:scale-105 active:scale-95;
+}
+
+.btn-glass-primary {
+  @apply bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700;
+  @apply text-white border-0 shadow-lg shadow-blue-500/50 dark:shadow-blue-500/30;
+  @apply hover:shadow-xl hover:shadow-blue-500/60;
+  @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300;
+  @apply hover:scale-105 active:scale-95;
+}
+
+.btn-glass-success {
+  @apply bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700;
+  @apply text-white border-0 shadow-lg shadow-green-500/50;
+  @apply hover:shadow-xl hover:shadow-green-500/60;
+  @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300;
+  @apply hover:scale-105 active:scale-95;
+}
+
+.btn-glass-danger {
+  @apply bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700;
+  @apply text-white border-0 shadow-lg shadow-red-500/50;
+  @apply hover:shadow-xl hover:shadow-red-500/60;
+  @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300;
+  @apply hover:scale-105 active:scale-95;
+}
+
+.btn-glass-warning {
+  @apply bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600;
+  @apply text-white border-0 shadow-lg shadow-yellow-500/50;
+  @apply hover:shadow-xl hover:shadow-yellow-500/60;
+  @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300;
+  @apply hover:scale-105 active:scale-95;
+}
+
+/* Glassmorphic Inputs */
+.input-glass {
+  @apply w-full px-4 py-3 rounded-xl backdrop-blur-lg transition-all duration-300;
+  @apply bg-white/40 dark:bg-gray-700/40 border border-white/30 dark:border-white/10;
+  @apply text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400;
+  @apply focus:bg-white/60 dark:focus:bg-gray-700/60;
+  @apply focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30;
+  @apply hover:bg-white/50 dark:hover:bg-gray-700/50;
+  @apply outline-none;
+}
+
+/* Glassmorphic Navigation */
+.nav-glass {
+  @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl;
+  @apply border-b border-white/20 dark:border-white/10;
+  @apply shadow-lg shadow-black/5;
+}
+
+/* Glassmorphic Badges */
+.badge-glass {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md;
+  @apply border border-white/30 dark:border-white/20;
+  @apply transition-all duration-200;
+}
+
+.badge-category {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md;
+  @apply bg-blue-500/20 dark:bg-blue-500/30 text-blue-700 dark:text-blue-300;
+  @apply border border-blue-500/40;
+  @apply transition-all duration-200;
+}
+
+.badge-food-type {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md;
+  @apply bg-green-500/20 dark:bg-green-500/30 text-green-700 dark:text-green-300;
+  @apply border border-green-500/40;
+  @apply transition-all duration-200;
+}
+
+.badge-suggestion {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md;
+  @apply bg-gradient-to-r from-yellow-400/30 to-orange-400/30 dark:from-yellow-400/40 dark:to-orange-400/40;
+  @apply text-yellow-700 dark:text-yellow-200;
+  @apply border border-yellow-500/50;
+  @apply shadow-md shadow-yellow-500/20;
+  @apply transition-all duration-200;
+}
+
+/* Modal Components */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-md;
+  @apply animate-fade-in;
+}
+
+.modal-glass {
+  @apply bg-white/95 dark:bg-gray-800/95 backdrop-blur-2xl rounded-2xl shadow-2xl;
+  @apply border border-white/30 dark:border-white/10;
+  @apply animate-scale-in;
+}
+
+/* Gradient Text */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600;
+  @apply dark:from-blue-400 dark:to-purple-400;
+}
+
+.text-gradient-food {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-500;
+}
+
+/* Shimmer Effect for Loading */
+.shimmer {
+  @apply bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent;
+  @apply bg-[length:200%_100%] animate-shimmer;
+}
+
+/* Floating Animation */
+.float-animation {
+  @apply animate-float;
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

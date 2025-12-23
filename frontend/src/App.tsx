@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { Home, Tag, Utensils } from 'lucide-react';
+import { Home, Settings } from 'lucide-react';
 import { useTheme } from './hooks/useTheme';
 import { ThemeToggle } from './components/ThemeToggle';
 import { GlobalSearch } from './components/GlobalSearch';
 import { HomePage } from './pages/HomePage';
-import { CategoriesPage } from './pages/CategoriesPage';
-import { FoodTypesPage } from './pages/FoodTypesPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { Category, FoodType, RestaurantFilters, getCategories, getFoodTypes } from './services/api';
 
 function App() {
@@ -30,22 +29,22 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen">
-        <nav className="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-40">
+        <nav className="nav-glass sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-3 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-8">
-                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-xl font-bold text-gradient">
                     The Nom Database
                   </span>
-                  <div className="hidden lg:flex gap-1">
+                  <div className="hidden lg:flex gap-2">
                     <NavLink
                       to="/"
                       className={({ isActive }) =>
-                        `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                        `flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${
                           isActive
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-md border border-blue-500/30 shadow-lg shadow-blue-500/20'
+                            : 'hover:bg-white/20 dark:hover:bg-white/10 hover:backdrop-blur-md hover:shadow-md'
                         }`
                       }
                     >
@@ -53,30 +52,17 @@ function App() {
                       <span>Restaurants</span>
                     </NavLink>
                     <NavLink
-                      to="/categories"
+                      to="/settings"
                       className={({ isActive }) =>
-                        `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                        `flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${
                           isActive
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-md border border-blue-500/30 shadow-lg shadow-blue-500/20'
+                            : 'hover:bg-white/20 dark:hover:bg-white/10 hover:backdrop-blur-md hover:shadow-md'
                         }`
                       }
                     >
-                      <Tag className="w-4 h-4" />
-                      <span>Categories</span>
-                    </NavLink>
-                    <NavLink
-                      to="/food-types"
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                          isActive
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`
-                      }
-                    >
-                      <Utensils className="w-4 h-4" />
-                      <span>Food Types</span>
+                      <Settings className="w-4 h-4" />
+                      <span>Settings</span>
                     </NavLink>
                   </div>
                 </div>
@@ -94,14 +80,14 @@ function App() {
               </div>
 
               {/* Mobile Navigation */}
-              <div className="flex lg:hidden gap-1 overflow-x-auto pb-1">
+              <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
                 <NavLink
                   to="/"
                   className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                    `flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 whitespace-nowrap ${
                       isActive
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-md border border-blue-500/30 shadow-lg shadow-blue-500/20'
+                        : 'hover:bg-white/20 dark:hover:bg-white/10 hover:backdrop-blur-md hover:shadow-md'
                     }`
                   }
                 >
@@ -109,30 +95,17 @@ function App() {
                   <span className="text-sm">Restaurants</span>
                 </NavLink>
                 <NavLink
-                  to="/categories"
+                  to="/settings"
                   className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                    `flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 whitespace-nowrap ${
                       isActive
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-md border border-blue-500/30 shadow-lg shadow-blue-500/20'
+                        : 'hover:bg-white/20 dark:hover:bg-white/10 hover:backdrop-blur-md hover:shadow-md'
                     }`
                   }
                 >
-                  <Tag className="w-4 h-4" />
-                  <span className="text-sm">Categories</span>
-                </NavLink>
-                <NavLink
-                  to="/food-types"
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                      isActive
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`
-                  }
-                >
-                  <Utensils className="w-4 h-4" />
-                  <span className="text-sm">Food Types</span>
+                  <Settings className="w-4 h-4" />
+                  <span className="text-sm">Settings</span>
                 </NavLink>
               </div>
             </div>
@@ -142,8 +115,7 @@ function App() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Routes>
             <Route path="/" element={<HomePage filters={filters} />} />
-            <Route path="/categories" element={<CategoriesPage />} />
-            <Route path="/food-types" element={<FoodTypesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
       </div>

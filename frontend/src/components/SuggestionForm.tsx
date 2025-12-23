@@ -106,7 +106,7 @@ export function SuggestionForm({ onSubmit, onCancel }: SuggestionFormProps) {
           type="text"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="input"
+          className="input-glass"
           required
         />
       </div>
@@ -117,7 +117,7 @@ export function SuggestionForm({ onSubmit, onCancel }: SuggestionFormProps) {
           type="text"
           value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          className="input"
+          className="input-glass"
         />
       </div>
 
@@ -128,7 +128,7 @@ export function SuggestionForm({ onSubmit, onCancel }: SuggestionFormProps) {
             type="tel"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="input"
+            className="input-glass"
             placeholder="+1 234 567 8900"
           />
         </div>
@@ -138,7 +138,7 @@ export function SuggestionForm({ onSubmit, onCancel }: SuggestionFormProps) {
             type="url"
             value={formData.website}
             onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-            className="input"
+            className="input-glass"
             placeholder="https://..."
           />
         </div>
@@ -154,7 +154,7 @@ export function SuggestionForm({ onSubmit, onCancel }: SuggestionFormProps) {
               suggested_category_id: e.target.value ? parseInt(e.target.value) : null,
             })
           }
-          className="input"
+          className="input-glass"
         >
           <option value="">Select category</option>
           {categories.map((cat) => (
@@ -228,10 +228,10 @@ export function SuggestionForm({ onSubmit, onCancel }: SuggestionFormProps) {
       )}
 
       <div className="flex gap-3 pt-4">
-        <button type="submit" className="btn btn-primary flex-1">
+        <button type="submit" className="btn-glass-primary flex-1">
           Submit Suggestion
         </button>
-        <button type="button" onClick={onCancel} className="btn btn-secondary">
+        <button type="button" onClick={onCancel} className="btn-glass">
           Cancel
         </button>
       </div>

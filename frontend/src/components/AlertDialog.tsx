@@ -36,10 +36,10 @@ export function AlertDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="modal-overlay"
         onClick={onClose}
       />
-      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md m-4">
+      <div className="modal-glass w-full max-w-md m-4 shadow-2xl shadow-black/20">
         <div className="p-6">
           {title && (
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
@@ -56,7 +56,7 @@ export function AlertDialog({
           <div className="flex justify-end">
             <button
               onClick={onClose}
-              className="px-6 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium transition-colors min-w-[80px]"
+              className="btn-glass-primary min-w-[80px]"
             >
               {buttonText}
             </button>

@@ -70,8 +70,10 @@ export function CategoriesPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <Tag className="w-6 h-6 text-blue-500" />
-        <h1 className="text-2xl font-bold">Categories</h1>
+        <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm">
+          <Tag className="w-6 h-6 text-blue-500" />
+        </div>
+        <h1 className="text-3xl font-bold text-gradient">Categories</h1>
       </div>
 
       <form onSubmit={handleCreate} className="flex gap-2 mb-6">
@@ -80,9 +82,9 @@ export function CategoriesPage() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="New category name..."
-          className="input flex-1"
+          className="input-glass flex-1"
         />
-        <button type="submit" className="btn btn-primary flex items-center gap-2">
+        <button type="submit" className="btn-glass-primary flex items-center gap-2">
           <Plus className="w-5 h-5" />
           Add
         </button>
@@ -95,19 +97,19 @@ export function CategoriesPage() {
       ) : (
         <div className="space-y-2">
           {categories.map((category) => (
-            <div key={category.id} className="card flex items-center justify-between">
+            <div key={category.id} className="card-glass flex items-center justify-between">
               {editingId === category.id ? (
                 <div className="flex items-center gap-2 flex-1">
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="input flex-1"
+                    className="input-glass flex-1"
                     autoFocus
                   />
                   <button
                     onClick={() => handleUpdate(category.id)}
-                    className="btn btn-primary text-sm"
+                    className="btn-glass-primary text-sm"
                   >
                     Save
                   </button>

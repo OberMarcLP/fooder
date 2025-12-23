@@ -47,10 +47,10 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="modal-overlay"
         onClick={onClose}
       />
-      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md m-4">
+      <div className="modal-glass w-full max-w-md m-4 shadow-2xl shadow-black/20">
         <div className="p-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
             {title}
@@ -61,13 +61,13 @@ export function ConfirmDialog({
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium transition-colors"
+              className="btn-glass"
             >
               {cancelText}
             </button>
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${confirmClassName}`}
+              className={confirmClassName === 'bg-red-600 hover:bg-red-700 text-white' ? 'btn-glass-danger' : 'btn-glass-primary'}
             >
               {confirmText}
             </button>

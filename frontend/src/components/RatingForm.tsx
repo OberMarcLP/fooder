@@ -52,7 +52,7 @@ export function RatingForm({ onSubmit, onCancel }: RatingFormProps) {
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          className="input min-h-[100px]"
+          className="input-glass min-h-[100px]"
           placeholder="Share your experience..."
           rows={3}
         />
@@ -62,11 +62,11 @@ export function RatingForm({ onSubmit, onCancel }: RatingFormProps) {
         <button
           type="submit"
           disabled={foodRating === 0 || serviceRating === 0 || ambianceRating === 0}
-          className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-glass-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Submit Rating
         </button>
-        <button type="button" onClick={onCancel} className="btn btn-secondary">
+        <button type="button" onClick={onCancel} className="btn-glass">
           Cancel
         </button>
       </div>

@@ -12,13 +12,13 @@ interface RestaurantCardProps {
 export function RestaurantCard({ restaurant, onClick, onReview, onReject }: RestaurantCardProps) {
   return (
     <div
-      className="card hover:shadow-xl transition-shadow"
+      className="card-glass hover:shadow-2xl hover:scale-105 transition-all duration-300 group cursor-pointer overflow-hidden relative p-6"
     >
-      <div onClick={onClick} className="cursor-pointer">
+      <div onClick={onClick}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="text-xl font-semibold flex-1">{restaurant.name}</h3>
           {restaurant.is_suggestion && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs rounded-full flex-shrink-0">
+            <span className="badge-suggestion backdrop-blur-xl animate-pulse flex-shrink-0">
               <Lightbulb className="w-3 h-3" />
               Suggestion
             </span>
@@ -33,13 +33,13 @@ export function RestaurantCard({ restaurant, onClick, onReview, onReject }: Rest
 
       <div className="flex flex-wrap gap-2 mb-3">
         {restaurant.category && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+          <span className="badge-category">
             <Tag className="w-3 h-3" />
             {restaurant.category.name}
           </span>
         )}
         {restaurant.food_types?.map((ft) => (
-          <span key={ft.id} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
+          <span key={ft.id} className="badge-food-type">
             <Utensils className="w-3 h-3" />
             {ft.name}
           </span>
@@ -52,7 +52,7 @@ export function RestaurantCard({ restaurant, onClick, onReview, onReject }: Rest
           <div className="flex-1">
             {restaurant.address && <span className="line-clamp-2">{restaurant.address}</span>}
             {restaurant.distance !== undefined && (
-              <span className="text-blue-500 font-medium">
+              <span className="text-blue-500 dark:text-blue-400 font-medium">
                 {restaurant.address ? ' · ' : ''}{restaurant.distance.toFixed(1)} km away
               </span>
             )}
@@ -61,7 +61,7 @@ export function RestaurantCard({ restaurant, onClick, onReview, onReject }: Rest
       )}
 
         {!restaurant.is_suggestion && restaurant.avg_rating && (
-          <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 pt-3 border-t border-white/20 dark:border-white/10">
             <StarRating rating={Math.round(restaurant.avg_rating.overall)} readonly size="sm" />
             <span className="text-sm text-gray-600 dark:text-gray-400">
               {restaurant.avg_rating.overall.toFixed(1)} ({restaurant.avg_rating.count} reviews)
@@ -71,13 +71,13 @@ export function RestaurantCard({ restaurant, onClick, onReview, onReject }: Rest
       </div>
 
       {restaurant.is_suggestion && onReview && onReject && (
-        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex gap-2 mt-3 pt-3 border-t border-white/20 dark:border-white/10">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onReview(restaurant);
             }}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="btn-glass-success flex-1 flex items-center justify-center gap-2"
           >
             <CheckCircle className="w-4 h-4" />
             Review
@@ -87,7 +87,7 @@ export function RestaurantCard({ restaurant, onClick, onReview, onReject }: Rest
               e.stopPropagation();
               onReject(restaurant);
             }}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="btn-glass-danger flex-1 flex items-center justify-center gap-2"
           >
             <XCircle className="w-4 h-4" />
             Reject

@@ -27,12 +27,12 @@ export function StarRating({
           type="button"
           onClick={() => !readonly && onRatingChange?.(star)}
           disabled={readonly}
-          className={`${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'} transition-transform`}
+          className={`${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-125'} transition-all duration-200`}
         >
           <Star
-            className={`${sizeClasses[size]} ${
+            className={`${sizeClasses[size]} transition-all duration-200 ${
               star <= rating
-                ? 'fill-yellow-400 text-yellow-400'
+                ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
                 : 'fill-none text-gray-300 dark:text-gray-600'
             }`}
           />

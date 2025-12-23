@@ -72,17 +72,14 @@ export function GlobalSearch({ categories, foodTypes, filters, onFiltersChange }
     <div ref={searchRef} className="relative w-full">
       <div className="flex gap-2 items-center mb-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 transition-colors peer-focus:text-blue-500 w-5 h-5" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => query.length >= 2 && setIsOpen(true)}
             placeholder="Search restaurants and suggestions..."
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     placeholder-gray-400 dark:placeholder-gray-500"
+            className="input-glass w-full pl-11 pr-11 peer focus:shadow-lg focus:shadow-blue-500/20"
           />
           {query && (
             <button
@@ -95,15 +92,15 @@ export function GlobalSearch({ categories, foodTypes, filters, onFiltersChange }
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`relative p-2 rounded-lg transition-colors ${
+          className={`relative p-2 rounded-xl transition-all duration-300 ${
             showFilters
-              ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-md border border-blue-500/30 shadow-lg shadow-blue-500/20'
+              : 'btn-glass'
           }`}
         >
           <Filter className="w-5 h-5" />
           {hasActiveFilters && (
-            <span className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full" />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
           )}
         </button>
       </div>
@@ -118,7 +115,7 @@ export function GlobalSearch({ categories, foodTypes, filters, onFiltersChange }
       )}
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-96 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-2xl border border-white/30 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/20 max-h-96 overflow-y-auto animate-slide-down">
           {isLoading ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
               Searching...
@@ -129,7 +126,7 @@ export function GlobalSearch({ categories, foodTypes, filters, onFiltersChange }
                 <li
                   key={`${restaurant.is_suggestion ? 's' : 'r'}-${restaurant.is_suggestion ? restaurant.suggestion_id : restaurant.id}-${index}`}
                   onClick={() => handleResultClick()}
-                  className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                  className="p-4 hover:bg-white/40 dark:hover:bg-white/10 cursor-pointer transition-all duration-200 hover:scale-[1.01]"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -138,7 +135,7 @@ export function GlobalSearch({ categories, foodTypes, filters, onFiltersChange }
                           {restaurant.name}
                         </h3>
                         {restaurant.is_suggestion && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs rounded-full flex-shrink-0">
+                          <span className="badge-suggestion flex-shrink-0">
                             <Lightbulb className="w-3 h-3" />
                             Suggestion
                           </span>

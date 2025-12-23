@@ -1,4 +1,4 @@
-import { GoogleMap, OverlayView, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
 
 interface RestaurantMapProps {
   latitude: number;
@@ -44,44 +44,16 @@ export function RestaurantMap({ latitude, longitude, name }: RestaurantMapProps)
         center={center}
         zoom={15}
       >
-        {/* Using OverlayView instead of deprecated Marker */}
-        <OverlayView
+        <MarkerF
           position={center}
-          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-        >
-          <div
-            style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '50% 50% 50% 0',
-              backgroundColor: '#EF4444',
-              border: '2px solid white',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-              transform: 'rotate(-45deg)',
-              cursor: 'pointer',
-            }}
-            title={name}
-          >
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: 'white',
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%) rotate(45deg)',
-              }}
-            />
-          </div>
-        </OverlayView>
+          title={name}
+        />
       </GoogleMap>
       <a
         href={`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute bottom-4 right-4 btn btn-primary text-sm"
+        className="absolute bottom-4 right-4 btn-glass-primary text-sm shadow-2xl"
       >
         Get Directions
       </a>

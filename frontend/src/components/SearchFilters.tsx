@@ -104,7 +104,7 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
         }
         setGettingCurrentLocation(false);
       },
-      (error) => {
+      (_error) => {
         setAlertMessage('Unable to get your location. Please search for a location instead.');
         setGettingCurrentLocation(false);
       }
@@ -127,12 +127,12 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
   };
 
   return (
-    <div className="card mb-6">
+    <div className="card-glass mb-6 p-6 animate-slide-down">
       {hasActiveFilters && (
         <div className="flex items-center justify-end mb-4">
           <button
             onClick={clearAllFilters}
-            className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+            className="text-sm btn-glass-danger px-3 py-1"
           >
             Clear all
           </button>
@@ -148,7 +148,7 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
             <select
               value={filters.category_id || ''}
               onChange={(e) => handleCategoryChange(e.target.value ? Number(e.target.value) : undefined)}
-              className="input"
+              className="input-glass"
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
@@ -167,10 +167,10 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
                 <button
                   key={ft.id}
                   onClick={() => handleFoodTypeToggle(ft.id)}
-                  className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
                     filters.food_type_ids?.includes(ft.id)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      ? 'badge-food-type shadow-lg scale-105'
+                      : 'btn-glass'
                   }`}
                 >
                   {ft.name}
@@ -186,16 +186,16 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
             </label>
 
             {selectedLocation ? (
-              <div className="flex items-center gap-2 mb-3 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-3 p-3 bg-blue-500/20 dark:bg-blue-500/30 backdrop-blur-md border border-blue-500/40 rounded-xl">
                 <MapPin className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 font-medium">
                   {selectedLocation.name}
                 </span>
                 <button
                   onClick={clearLocationFilter}
-                  className="text-gray-400 hover:text-red-500"
+                  className="p-1 hover:bg-red-500/20 rounded-full transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
                 </button>
               </div>
             ) : (
@@ -206,7 +206,7 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
                     value={locationSearch}
                     onChange={(e) => setLocationSearch(e.target.value)}
                     placeholder="Search city..."
-                    className="input !pl-10"
+                    className="input-glass pl-10"
                   />
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   {searchingLocation && (
@@ -215,12 +215,12 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
                 </div>
 
                 {locationResults.length > 0 && (
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-2xl border border-white/30 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/20 max-h-48 overflow-y-auto animate-slide-down">
                     {locationResults.map((place) => (
                       <button
                         key={place.place_id}
                         onClick={() => handleLocationSelect(place)}
-                        className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                        className="w-full px-4 py-3 text-left hover:bg-white/40 dark:hover:bg-white/10 text-sm transition-all duration-200 first:rounded-t-2xl last:rounded-b-2xl"
                       >
                         <div className="font-medium text-gray-900 dark:text-white">{place.name}</div>
                         <div className="text-gray-500 dark:text-gray-400 text-xs">{place.address}</div>
@@ -251,10 +251,10 @@ export function SearchFilters({ categories, foodTypes, filters, onFiltersChange 
                   key={km}
                   onClick={() => handleRadiusChange(filters.radius === km ? undefined : km)}
                   disabled={!selectedLocation}
-                  className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
                     filters.radius === km
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed'
+                      ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-md border border-blue-500/30 shadow-lg shadow-blue-500/20'
+                      : 'btn-glass disabled:opacity-50 disabled:cursor-not-allowed'
                   }`}
                 >
                   {km} km
