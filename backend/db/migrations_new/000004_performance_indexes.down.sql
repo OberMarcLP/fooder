@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_menu_photos_restaurant_created;
+DROP INDEX IF EXISTS idx_ratings_restaurant_ratings;
+DROP INDEX IF EXISTS idx_suggestions_created_at;
+DROP INDEX IF EXISTS idx_restaurants_created_at;
+DROP INDEX IF EXISTS idx_suggestions_category_status;
+DROP INDEX IF EXISTS idx_suggestions_location;
+DROP INDEX IF EXISTS idx_suggestions_name_lower;
+DROP INDEX IF EXISTS idx_restaurants_location;
+DROP INDEX IF EXISTS idx_restaurants_name_lower;

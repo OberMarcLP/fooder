@@ -3,6 +3,7 @@ import { MenuPhoto } from '../services/api';
 import { Trash2, Edit2, Check, X } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { AlertDialog } from './AlertDialog';
+import { LazyImage } from './LazyImage';
 
 interface PhotoGalleryProps {
   photos: MenuPhoto[];
@@ -72,7 +73,7 @@ export function PhotoGallery({ photos, onCaptionUpdate, onDelete }: PhotoGallery
           className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white dark:bg-gray-800"
         >
           <div className="relative group">
-            <img
+            <LazyImage
               src={photo.url}
               alt={photo.caption}
               className="w-full h-48 object-cover"

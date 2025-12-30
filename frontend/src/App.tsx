@@ -1,30 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { Home, Settings } from 'lucide-react';
+import { Home, Settings, Loader2 } from 'lucide-react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useTheme } from './hooks/useTheme';
 import { ThemeToggle } from './components/ThemeToggle';
 import { GlobalSearch } from './components/GlobalSearch';
-import { HomePage } from './pages/HomePage';
-import { SettingsPage } from './pages/SettingsPage';
-import { Category, FoodType, RestaurantFilters, getCategories, getFoodTypes } from './services/api';
+import { useCategories, useFoodTypes } from './hooks/useApi';
+import { RestaurantFilters } from './services/api';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider } from './hooks/useToast';
 
-function App() {
+// Lazy load page components for code splitting
+const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+  </div>
+);
+
+// Create QueryClient instance with optimized defaults and error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      retry: 1, // Retry failed requests once
+      staleTime: 5 * 60 * 1000, // 5 minutes default
+    },
+    mutations: {
+      retry: 0, // Don't retry mutations by default
+    },
+  },
+});
+
+function AppContent() {
   const { isDark, toggleTheme } = useTheme();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [foodTypes, setFoodTypes] = useState<FoodType[]>([]);
   const [filters, setFilters] = useState<RestaurantFilters>({});
 
-  useEffect(() => {
-    const loadFiltersData = async () => {
-      try {
-        const [cats, fts] = await Promise.all([getCategories(), getFoodTypes()]);
-        setCategories(cats);
-        setFoodTypes(fts);
-      } catch (error) {
-      }
-    };
-    loadFiltersData();
-  }, []);
+  // Use React Query hooks instead of manual fetching
+  const { data: categories = [] } = useCategories();
+  const { data: foodTypes = [] } = useFoodTypes();
 
   return (
     <BrowserRouter>
@@ -113,13 +131,28 @@ function App() {
         </nav>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Routes>
-            <Route path="/" element={<HomePage filters={filters} />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<HomePage filters={filters} />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </BrowserRouter>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <AppContent />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MapPin, Tag, Utensils, Edit, Trash2, Plus, Loader2, Phone, Globe, Camera, ChevronUp } from 'lucide-react';
-import { Restaurant, Rating, MenuPhoto, getRatings, createRating, getMenuPhotos, uploadMenuPhoto, updatePhotoCaption, deleteMenuPhoto } from '../services/api';
+import { Restaurant } from '../services/api';
+import { useRatings, useCreateRating, useMenuPhotos, useUploadMenuPhoto, useUpdatePhotoCaption, useDeleteMenuPhoto } from '../hooks/useApi';
 import { StarRating } from '../components/StarRating';
 import { RestaurantMap } from '../components/RestaurantMap';
 import { RatingForm } from '../components/RatingForm';
@@ -11,41 +12,19 @@ interface RestaurantDetailProps {
   restaurant: Restaurant;
   onEdit: () => void;
   onDelete: () => void;
-  onRatingAdded: () => void;
 }
 
-export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }: RestaurantDetailProps) {
-  const [ratings, setRatings] = useState<Rating[]>([]);
-  const [photos, setPhotos] = useState<MenuPhoto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingPhotos, setLoadingPhotos] = useState(true);
+export function RestaurantDetail({ restaurant, onEdit, onDelete }: RestaurantDetailProps) {
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
 
-  const fetchRatings = async () => {
-    try {
-      const data = await getRatings(restaurant.id);
-      setRatings(data);
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPhotos = async () => {
-    try {
-      const data = await getMenuPhotos(restaurant.id);
-      setPhotos(data);
-    } catch (error) {
-    } finally {
-      setLoadingPhotos(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRatings();
-    fetchPhotos();
-  }, [restaurant.id]);
+  // Use React Query hooks
+  const { data: ratings = [], isLoading: loading } = useRatings(restaurant.id);
+  const { data: photos = [], isLoading: loadingPhotos } = useMenuPhotos(restaurant.id);
+  const createRatingMutation = useCreateRating();
+  const uploadPhotoMutation = useUploadMenuPhoto();
+  const updateCaptionMutation = useUpdatePhotoCaption();
+  const deletePhotoMutation = useDeleteMenuPhoto();
 
   const handleAddRating = async (data: {
     food_rating: number;
@@ -53,29 +32,33 @@ export function RestaurantDetail({ restaurant, onEdit, onDelete, onRatingAdded }
     ambiance_rating: number;
     comment?: string;
   }) => {
-    try {
-      await createRating({ ...data, restaurant_id: restaurant.id });
-      setShowRatingForm(false);
-      fetchRatings();
-      onRatingAdded();
-    } catch (error) {
-    }
+    createRatingMutation.mutate(
+      { ...data, restaurant_id: restaurant.id },
+      {
+        onSuccess: () => {
+          setShowRatingForm(false);
+        },
+      }
+    );
   };
 
   const handlePhotoUpload = async (file: File, caption: string) => {
-    await uploadMenuPhoto(restaurant.id, file, caption);
-    fetchPhotos();
-    setShowPhotoUpload(false);
+    uploadPhotoMutation.mutate(
+      { restaurantId: restaurant.id, photo: file, caption },
+      {
+        onSuccess: () => {
+          setShowPhotoUpload(false);
+        },
+      }
+    );
   };
 
   const handleCaptionUpdate = async (id: number, caption: string) => {
-    await updatePhotoCaption(id, caption);
-    fetchPhotos();
+    updateCaptionMutation.mutate({ id, caption, restaurantId: restaurant.id });
   };
 
   const handlePhotoDelete = async (id: number) => {
-    await deleteMenuPhoto(id);
-    fetchPhotos();
+    deletePhotoMutation.mutate({ id, restaurantId: restaurant.id });
   };
 
   return (

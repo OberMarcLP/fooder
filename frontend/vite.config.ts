@@ -18,4 +18,29 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Enable build optimizations
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console logs in production
+        drop_debugger: true,
+      },
+    },
+    // Code splitting configuration
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor libraries into separate chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'maps-vendor': ['@react-google-maps/api', '@googlemaps/js-api-loader'],
+          'icons-vendor': ['lucide-react'],
+        },
+      },
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 1000,
+    // Source maps for production debugging (optional, can be disabled)
+    sourcemap: false,
+  },
 })

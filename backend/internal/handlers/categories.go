@@ -11,6 +11,15 @@ import (
 	"github.com/nomdb/backend/internal/models"
 )
 
+// GetCategories godoc
+// @Summary List all categories
+// @Description Get a list of all cultural categories
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Category "List of categories"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /categories [get]
 func GetCategories(w http.ResponseWriter, r *http.Request) {
 	rows, err := database.GetPool().Query(context.Background(),
 		"SELECT id, name, created_at, updated_at FROM categories ORDER BY name")
@@ -34,6 +43,17 @@ func GetCategories(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(categories)
 }
 
+// GetCategory godoc
+// @Summary Get a category by ID
+// @Description Get detailed information about a specific category
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param id path int true "Category ID"
+// @Success 200 {object} models.Category "Category details"
+// @Failure 400 {object} map[string]string "Invalid category ID"
+// @Failure 404 {object} map[string]string "Category not found"
+// @Router /categories/{id} [get]
 func GetCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -55,6 +75,17 @@ func GetCategory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(c)
 }
 
+// CreateCategory godoc
+// @Summary Create a new category
+// @Description Create a new cultural category with the provided name
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param category body models.CreateCategoryRequest true "Category creation request"
+// @Success 201 {object} models.Category "Created category"
+// @Failure 400 {object} map[string]string "Invalid request body or name is required"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /categories [post]
 func CreateCategory(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -81,6 +112,18 @@ func CreateCategory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(c)
 }
 
+// UpdateCategory godoc
+// @Summary Update a category
+// @Description Update an existing category's name
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param id path int true "Category ID"
+// @Param category body models.CreateCategoryRequest true "Category update request"
+// @Success 200 {object} models.Category "Updated category"
+// @Failure 400 {object} map[string]string "Invalid request or name is required"
+// @Failure 404 {object} map[string]string "Category not found"
+// @Router /categories/{id} [put]
 func UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -113,6 +156,18 @@ func UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(c)
 }
 
+// DeleteCategory godoc
+// @Summary Delete a category
+// @Description Delete a category by ID
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param id path int true "Category ID"
+// @Success 204 "Category deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid category ID"
+// @Failure 404 {object} map[string]string "Category not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /categories/{id} [delete]
 func DeleteCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])

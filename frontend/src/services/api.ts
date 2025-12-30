@@ -51,6 +51,19 @@ export interface RestaurantFilters {
   lng?: number;
   radius?: number; // in km
   include_suggestions?: boolean;
+  q?: string; // search query
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  next_cursor?: string;
+  has_more: boolean;
+  total?: number;
+}
+
+export interface PaginationParams {
+  limit?: number;
+  cursor?: string;
 }
 
 export interface CreateRestaurantData {
@@ -156,6 +169,33 @@ export const getRestaurants = (filters?: RestaurantFilters) => {
   const queryString = params.toString();
   return fetchApi<Restaurant[]>(`/restaurants${queryString ? `?${queryString}` : ''}`);
 };
+
+export const getRestaurantsPaginated = (filters?: RestaurantFilters, pagination?: PaginationParams) => {
+  const params = new URLSearchParams();
+
+  // Filters
+  if (filters?.category_id) {
+    params.set('category_id', filters.category_id.toString());
+  }
+  if (filters?.food_type_ids && filters.food_type_ids.length > 0) {
+    params.set('food_type_ids', filters.food_type_ids.join(','));
+  }
+  if (filters?.q) {
+    params.set('q', filters.q);
+  }
+
+  // Pagination
+  if (pagination?.limit) {
+    params.set('limit', pagination.limit.toString());
+  }
+  if (pagination?.cursor) {
+    params.set('cursor', pagination.cursor);
+  }
+
+  const queryString = params.toString();
+  return fetchApi<PaginatedResponse<Restaurant>>(`/restaurants/paginated${queryString ? `?${queryString}` : ''}`);
+};
+
 export const getRestaurant = (id: number) => fetchApi<Restaurant>(`/restaurants/${id}`);
 export const createRestaurant = (data: CreateRestaurantData) =>
   fetchApi<Restaurant>('/restaurants', {

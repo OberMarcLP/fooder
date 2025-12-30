@@ -1,16 +1,20 @@
 # The Nom Database - Restaurant Rating App
 
-A full-stack restaurant rating application with Google Maps integration.
+A production-ready, full-stack restaurant rating application with Google Maps integration, comprehensive monitoring, and automated testing.
 
 ## Tech Stack
 
-- **Backend**: Go with Gorilla Mux
-- **Frontend**: React + TypeScript + Vite + Tailwind CSS
-- **Database**: PostgreSQL
+- **Backend**: Go 1.23 with Gorilla Mux
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Database**: PostgreSQL with automated migrations
 - **Containerization**: Docker Compose
+- **Logging**: Structured logging with zerolog
+- **Monitoring**: Real-time metrics and request tracing
+- **Testing**: Comprehensive test suite with 54.5% middleware coverage
 
 ## Features
 
+### Core Functionality
 - Search restaurants via Google Maps API
 - Rate restaurants on food, service, and ambiance
 - Manage cultural categories (Italian, Asian, etc.)
@@ -21,6 +25,16 @@ A full-stack restaurant rating application with Google Maps integration.
 - Include suggested restaurants in search results
 - Upload menu photos (supports AWS S3 or local storage)
 - Dark/Light theme toggle
+
+### Production Features
+- **Structured Logging**: zerolog-based logging with JSON and console formats
+- **Request Tracing**: UUID-based request correlation across the entire request lifecycle
+- **Real-time Metrics**: Track requests, errors, response times (p50, p95, p99)
+- **Performance Monitoring**: Metrics endpoint at `/api/metrics` with detailed statistics
+- **Security**: Rate limiting, CORS, input sanitization, security headers
+- **Database Migrations**: Automated schema migrations with version control
+- **API Documentation**: Interactive Swagger UI at `/api/docs`
+- **Comprehensive Testing**: Unit tests, benchmarks, and coverage reports
 
 ## Quick Start
 
@@ -147,6 +161,7 @@ docker compose up --build
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080/api
    - Swagger UI (API Documentation): http://localhost:8080/api/docs
+   - Metrics Dashboard: http://localhost:8080/api/metrics
 
 **Note:** The first build may take a few minutes. Subsequent starts will be faster.
 
@@ -195,9 +210,14 @@ make frontend
 
 **Other useful commands:**
 ```bash
-make install      # Install frontend dependencies
-make db-stop      # Stop the database
-make clean        # Stop and remove database container and volume
+make install           # Install frontend dependencies
+make test              # Run all tests (backend + frontend)
+make test-coverage     # Generate test coverage reports
+make benchmark         # Run performance benchmarks
+make db-stop           # Stop the database
+make clean             # Stop and remove database container and volume
+make migrate-up        # Run database migrations
+make migrate-version   # Show current migration version
 ```
 
 **Note:** The Makefile automatically loads environment variables from your `.env` file.
@@ -267,3 +287,364 @@ For a quick reference, see the endpoints below, or use Swagger UI for detailed s
 ### Google Maps
 - `GET /api/places/search?q=query` - Search places
 - `GET /api/places/:placeId` - Get place details
+
+### Restaurant Suggestions
+- `GET /api/suggestions` - List suggestions
+- `POST /api/suggestions` - Create suggestion
+- `PATCH /api/suggestions/:id/status` - Update status
+- `POST /api/suggestions/:id/convert` - Convert to restaurant
+- `DELETE /api/suggestions/:id` - Delete suggestion
+
+### Menu Photos
+- `GET /api/restaurants/:id/photos` - Get menu photos
+- `POST /api/restaurants/:id/photos` - Upload photo
+- `PATCH /api/photos/:id` - Update photo caption
+- `DELETE /api/photos/:id` - Delete photo
+
+### Search & Monitoring
+- `GET /api/search?q=query` - Global search across restaurants
+- `GET /api/metrics` - Real-time performance metrics
+- `GET /api/health` - Health check endpoint
+
+## Monitoring & Observability
+
+The application includes comprehensive monitoring and logging features for production use.
+
+### Structured Logging
+
+All HTTP requests are logged with structured fields:
+
+```json
+{
+  "level": "info",
+  "time": "2025-12-30T20:13:44Z",
+  "message": "HTTP request completed",
+  "request_id": "62d30079-6774-46f6-b623-83680479d9a7",
+  "method": "GET",
+  "path": "/api/restaurants",
+  "ip": "192.168.65.1:55864",
+  "duration": 4.333917,
+  "status": 200,
+  "bytes": 1124
+}
+```
+
+**Configure logging:**
+```bash
+# Console format (development)
+LOG_FORMAT=console
+
+# JSON format (production)
+LOG_FORMAT=json
+
+# Enable debug logging
+DEBUG=true
+```
+
+### Request Tracing
+
+Every request gets a unique UUID for end-to-end tracing:
+- Appears in response headers as `X-Request-ID`
+- Included in all log entries
+- Can be provided by client or auto-generated
+
+**Example:**
+```bash
+# Client provides request ID
+curl -H "X-Request-ID: my-trace-id" http://localhost:8080/api/restaurants
+
+# Filter logs by request ID
+docker compose logs backend | grep "my-trace-id"
+```
+
+### Real-time Metrics
+
+Access live performance metrics at `/api/metrics`:
+
+```json
+{
+  "total_requests": 1234,
+  "total_errors": 5,
+  "requests_by_method": {
+    "GET": 800,
+    "POST": 300
+  },
+  "requests_by_status": {
+    "200": 1100,
+    "500": 14
+  },
+  "avg_response_time": "2.5ms",
+  "p50_response_time": "1.2ms",
+  "p95_response_time": "8.5ms",
+  "p99_response_time": "15.3ms",
+  "uptime": "2h15m30s"
+}
+```
+
+**Metrics are automatically logged every 5 minutes.**
+
+For detailed monitoring documentation, see [MONITORING.md](MONITORING.md).
+
+## Testing
+
+The project includes comprehensive automated tests for both backend and frontend.
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Backend tests only
+make test-backend
+
+# Frontend tests only
+make test-frontend
+
+# Generate coverage reports
+make test-coverage
+
+# Run performance benchmarks
+make benchmark
+```
+
+### Test Coverage
+
+**Backend:**
+- Middleware: 54.5% coverage ✅
+  - Logging middleware: Fully tested
+  - Metrics collection: Fully tested
+  - Request ID middleware: Fully tested
+- Services: 17.4% coverage
+  - Image processor: 78.6% coverage
+- 30+ unit tests
+- 3 benchmark tests
+
+**Frontend:**
+- StarRating component: 8 tests ✅
+- ThemeToggle component: 6 tests ✅
+- LazyImage component: Multiple tests ✅
+- Vitest + React Testing Library
+
+### Coverage Reports
+
+After running `make test-coverage`, view reports at:
+- Backend: `backend/coverage.html`
+- Frontend: `frontend/coverage/index.html`
+
+For detailed testing documentation, see [TESTING.md](TESTING.md).
+
+## Database Migrations
+
+The application uses automated database migrations for schema management.
+
+### Migration Commands
+
+```bash
+# Run pending migrations
+make migrate-up
+
+# Rollback last migration
+make migrate-down
+
+# Show current version
+make migrate-version
+
+# Create new migration
+make migrate-create NAME=add_new_feature
+
+# Force specific version
+make migrate-force VERSION=4
+```
+
+### Migration Files
+
+Located in `db/migrations_new/`:
+- `001_initial_schema.sql` - Base tables
+- `002_suggestions.sql` - Suggestion system
+- `003_menu_photos.sql` - Photo support
+- `004_performance_indexes.sql` - Performance optimization
+- `005_security_enhancements.sql` - Security improvements
+
+Migrations run automatically on application startup.
+
+## Security Features
+
+The application implements multiple security layers:
+
+### Middleware Stack
+
+1. **Panic Recovery**: Graceful error handling
+2. **Request ID**: Request correlation and tracing
+3. **Security Headers**: XSS, clickjacking, MIME sniffing protection
+4. **Rate Limiting**: 100 requests/minute per IP (burst: 20)
+5. **Content-Type Validation**: Enforce correct content types
+6. **Request Size Limits**: 10MB maximum request size
+7. **Input Sanitization**: HTML/script tag stripping
+8. **Compression**: gzip compression for responses
+9. **CORS**: Configurable origin restrictions
+
+### Configuration
+
+```bash
+# Allowed origins for CORS
+ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
+
+# Rate limiting is automatic (100 req/min per IP)
+```
+
+## Performance Optimization
+
+### Database Indexes
+
+Performance indexes on:
+- Restaurant lookups by category/food type
+- Geospatial queries (lat/lng)
+- Rating aggregations
+- Suggestion status filtering
+
+### Caching
+
+- Image thumbnails are pre-generated
+- Static assets served with compression
+- Database connection pooling
+
+### Benchmarks
+
+```bash
+make benchmark
+```
+
+Example results:
+```
+BenchmarkRequestIDMiddleware:  1437 ns/op
+BenchmarkLoggingMiddleware:    Fast middleware chain
+BenchmarkMetrics_RecordRequest: Efficient metric recording
+```
+
+## Documentation
+
+Comprehensive documentation is available:
+
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete API reference with examples
+- **[MONITORING.md](MONITORING.md)** - Logging, metrics, and observability guide
+- **[TESTING.md](TESTING.md)** - Testing strategy and writing tests
+- **[MIGRATIONS.md](MIGRATIONS.md)** - Database migration guide
+- **[OPTIMIZATIONS.md](OPTIMIZATIONS.md)** - Performance optimization strategies
+
+## Project Structure
+
+```
+.
+├── backend/
+│   ├── cmd/
+│   │   ├── server/          # Application entry point
+│   │   └── migrate/         # Migration tool
+│   ├── internal/
+│   │   ├── database/        # Database connection
+│   │   ├── handlers/        # HTTP handlers
+│   │   ├── middleware/      # HTTP middleware
+│   │   ├── models/          # Data models
+│   │   ├── services/        # Business logic
+│   │   ├── logger/          # Structured logging
+│   │   └── errors/          # Error handling
+│   ├── docs/                # Swagger documentation
+│   └── db/migrations_new/   # Database migrations
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   ├── pages/           # Page components
+│   │   ├── hooks/           # Custom hooks
+│   │   ├── services/        # API client
+│   │   └── test/            # Test utilities
+│   └── coverage/            # Test coverage reports
+├── db/                      # Database init scripts
+├── docker-compose.yml       # Container orchestration
+├── Makefile                 # Development automation
+└── .env.example             # Environment template
+```
+
+## Contributing
+
+When contributing to this project:
+
+1. **Write tests** for new features
+2. **Run tests** before committing: `make test`
+3. **Check coverage**: `make test-coverage`
+4. **Follow existing patterns** for consistency
+5. **Update documentation** when adding features
+6. **Use structured logging** for new log messages
+7. **Add migrations** for schema changes
+
+## Troubleshooting
+
+### Common Issues
+
+**Frontend can't connect to backend:**
+- Check backend is running: `docker compose ps`
+- Verify backend health: `curl http://localhost:8080/api/health`
+- Check CORS configuration in backend
+
+**Database connection failed:**
+- Ensure database is healthy: `docker compose ps`
+- Check connection string in `.env`
+- Verify port 5432 is not in use
+
+**Google Maps not loading:**
+- Verify API key in `.env` file
+- Check APIs are enabled in Google Cloud Console
+- Review browser console for errors
+
+**High memory usage:**
+- Metrics are limited to prevent memory bloat
+- Check log aggregation is configured
+- Review Docker resource limits
+
+### Debug Mode
+
+Enable detailed logging to troubleshoot issues:
+
+```bash
+# In .env file
+DEBUG=true
+LOG_FORMAT=console
+```
+
+View logs:
+```bash
+# All backend logs
+docker compose logs -f backend
+
+# Filter by error level
+docker compose logs backend | grep "ERR"
+
+# Filter by request ID
+docker compose logs backend | grep "request_id=abc123"
+```
+
+## Production Deployment
+
+For production deployment:
+
+1. **Set `LOG_FORMAT=json`** for log aggregation
+2. **Configure `ALLOWED_ORIGINS`** for CORS
+3. **Use strong database credentials**
+4. **Enable SSL/TLS** for database connections
+5. **Set up log aggregation** (CloudWatch, Elasticsearch, etc.)
+6. **Configure alerts** based on metrics
+7. **Use S3** for photo storage instead of local storage
+8. **Set up monitoring dashboards** for metrics
+9. **Run migrations** before deploying new versions
+10. **Test with `make test`** before deployment
+
+## License
+
+MIT License - See LICENSE file for details
+
+## Support
+
+For issues, questions, or contributions:
+- Create an issue on GitHub
+- Check [TESTING.md](TESTING.md) for testing guidelines
+- Review [MONITORING.md](MONITORING.md) for debugging help
+- See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for API details

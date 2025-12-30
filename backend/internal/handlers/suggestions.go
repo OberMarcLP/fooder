@@ -35,7 +35,15 @@ func setFoodTypesForSuggestion(ctx context.Context, suggestionID int, foodTypeID
 	return nil
 }
 
-// GetSuggestions retrieves all suggestions with optional status filter
+// @Summary List all restaurant suggestions
+// @Description Get a list of all restaurant suggestions with optional status filter
+// @Tags Suggestions
+// @Accept json
+// @Produce json
+// @Param status query string false "Filter by status (pending, approved, tested, rejected)"
+// @Success 200 {array} models.RestaurantSuggestion "List of suggestions"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /suggestions [get]
 func GetSuggestions(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	statusFilter := r.URL.Query().Get("status")
@@ -111,7 +119,17 @@ func GetSuggestions(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(suggestions)
 }
 
-// GetSuggestion retrieves a single suggestion by ID
+// @Summary Get a suggestion by ID
+// @Description Get detailed information about a specific restaurant suggestion
+// @Tags Suggestions
+// @Accept json
+// @Produce json
+// @Param id path int true "Suggestion ID"
+// @Success 200 {object} models.RestaurantSuggestion "Suggestion details"
+// @Failure 400 {object} map[string]string "Invalid suggestion ID"
+// @Failure 404 {object} map[string]string "Suggestion not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /suggestions/{id} [get]
 func GetSuggestion(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -163,7 +181,17 @@ func GetSuggestion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(sug)
 }
 
-// CreateSuggestion creates a new restaurant suggestion
+// @Summary Create a new restaurant suggestion
+// @Description Create a new restaurant suggestion with details and optional food types
+// @Tags Suggestions
+// @Accept json
+// @Produce json
+// @Param suggestion body models.CreateSuggestionRequest true "Suggestion creation request"
+// @Success 201 {object} models.RestaurantSuggestion "Created suggestion"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 409 {object} map[string]string "Suggestion already exists or restaurant exists"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /suggestions [post]
 func CreateSuggestion(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateSuggestionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -253,7 +281,18 @@ func CreateSuggestion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(sug)
 }
 
-// UpdateSuggestionStatus updates the status of a suggestion
+// @Summary Update suggestion status
+// @Description Update the status of a restaurant suggestion (pending, approved, tested, rejected)
+// @Tags Suggestions
+// @Accept json
+// @Produce json
+// @Param id path int true "Suggestion ID"
+// @Param status body models.UpdateSuggestionStatusRequest true "Status update request"
+// @Success 200 {object} models.RestaurantSuggestion "Updated suggestion"
+// @Failure 400 {object} map[string]string "Invalid request or status"
+// @Failure 404 {object} map[string]string "Suggestion not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /suggestions/{id}/status [patch]
 func UpdateSuggestionStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -303,7 +342,18 @@ func UpdateSuggestionStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(sug)
 }
 
-// ConvertSuggestion converts a suggestion to a permanent restaurant
+// @Summary Convert suggestion to restaurant
+// @Description Convert a restaurant suggestion to a permanent restaurant with initial ratings
+// @Tags Suggestions
+// @Accept json
+// @Produce json
+// @Param id path int true "Suggestion ID"
+// @Param conversion body models.ConvertSuggestionRequest true "Conversion request with ratings"
+// @Success 200 {object} map[string]interface{} "Conversion result with restaurant_id"
+// @Failure 400 {object} map[string]string "Invalid request or ratings"
+// @Failure 404 {object} map[string]string "Suggestion not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /suggestions/{id}/convert [post]
 func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -407,7 +457,17 @@ func ConvertSuggestion(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DeleteSuggestion deletes a suggestion
+// @Summary Delete a suggestion
+// @Description Delete a restaurant suggestion by ID
+// @Tags Suggestions
+// @Accept json
+// @Produce json
+// @Param id path int true "Suggestion ID"
+// @Success 204 "Suggestion deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid suggestion ID"
+// @Failure 404 {object} map[string]string "Suggestion not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /suggestions/{id} [delete]
 func DeleteSuggestion(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])

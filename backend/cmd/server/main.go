@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/nomdb/backend/internal/database"
@@ -12,8 +14,60 @@ import (
 	"github.com/nomdb/backend/internal/services"
 	"github.com/rs/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"golang.org/x/time/rate"
+
+	_ "github.com/nomdb/backend/docs" // Import generated docs
 )
 
+// @title The Nom Database API
+// @version 1.0
+// @description Restaurant rating and discovery API with Google Maps integration
+// @description
+// @description This API provides endpoints for managing restaurants, ratings, categories, and food types.
+// @description It integrates with Google Maps for restaurant search and location data.
+//
+// @contact.name API Support
+// @contact.url https://github.com/your-username/the-nom-database
+// @contact.email support@nomdb.com
+//
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+//
+// @host localhost:8080
+// @BasePath /api
+//
+// @schemes http https
+//
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+//
+// @tag.name Restaurants
+// @tag.description Restaurant management endpoints
+//
+// @tag.name Ratings
+// @tag.description Restaurant rating endpoints
+//
+// @tag.name Categories
+// @tag.description Cultural category management
+//
+// @tag.name Food Types
+// @tag.description Food type/cuisine management
+//
+// @tag.name Suggestions
+// @tag.description Restaurant suggestion workflow
+//
+// @tag.name Google Maps
+// @tag.description Google Places API integration
+//
+// @tag.name Photos
+// @tag.description Menu photo management
+//
+// @tag.name Search
+// @tag.description Global search functionality
+//
+// @tag.name Health
+// @tag.description Health check endpoints
 func main() {
 	logger.Info("🚀 Starting The Nom Database server...")
 	if logger.IsDebugMode() {
@@ -25,6 +79,17 @@ func main() {
 		logger.Fatal("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
+
+	// Run database migrations
+	databaseURL := os.Getenv("DATABASE_URL")
+	migrationsPath := "/app/db/migrations_new"
+	if _, err := os.Stat("./db/migrations_new"); err == nil {
+		// Local development
+		migrationsPath = "./db/migrations_new"
+	}
+	if err := database.RunMigrations(databaseURL, migrationsPath); err != nil {
+		logger.Fatal("Failed to run migrations: %v", err)
+	}
 
 	// Initialize Google Maps service
 	_ = services.NewGoogleMapsService()
@@ -66,6 +131,7 @@ func main() {
 
 	// Restaurants
 	api.HandleFunc("/restaurants", handlers.GetRestaurants).Methods("GET")
+	api.HandleFunc("/restaurants/paginated", handlers.GetRestaurantsPaginated).Methods("GET")
 	api.HandleFunc("/restaurants/{id}", handlers.GetRestaurant).Methods("GET")
 	api.HandleFunc("/restaurants", handlers.CreateRestaurant).Methods("POST")
 	api.HandleFunc("/restaurants/{id}", handlers.UpdateRestaurant).Methods("PUT")
@@ -98,10 +164,20 @@ func main() {
 	api.HandleFunc("/photos/{id}", handlers.UpdatePhotoCaption).Methods("PATCH")
 	api.HandleFunc("/photos/{id}", handlers.DeleteMenuPhoto).Methods("DELETE")
 
-	// Health check
+	// Health check (support both GET and HEAD for Docker healthcheck)
 	api.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if r.Method == "GET" {
+			w.Write([]byte("OK"))
+		}
+	}).Methods("GET", "HEAD")
+
+	// Metrics endpoint
+	api.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		stats := middleware.GetMetrics().GetStats()
+		json.NewEncoder(w).Encode(stats)
 	}).Methods("GET")
 
 	// Serve the swagger.yaml file first
@@ -110,21 +186,50 @@ func main() {
 		http.ServeFile(w, r, "./docs/swagger.yaml")
 	}).Methods("GET")
 
-	// Swagger UI - serve at /api/docs (must be after swagger.yaml)
+	// Redirect /docs to /docs/ for Swagger UI
+	api.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/api/docs/", http.StatusMovedPermanently)
+	}).Methods("GET")
+
+	// Swagger UI - serve at /api/docs/ (must be after swagger.yaml)
 	api.PathPrefix("/docs/").Handler(httpSwagger.Handler(
 		httpSwagger.URL("/api/swagger.yaml"),
 	))
 
-	// CORS middleware
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
-	})
+	// Initialize rate limiter
+	// Allow 100 requests per minute per IP, with burst of 20
+	rateLimiter := middleware.NewIPRateLimiter(rate.Every(time.Minute/100), 20)
+	// Start cleanup task to prevent memory leaks (run every 10 minutes)
+	rateLimiter.StartCleanupTask(10 * time.Minute)
+	logger.Info("🔒 Rate limiting enabled: 100 req/min per IP, burst: 20")
 
-	// Apply middleware chain
-	handler := middleware.LoggingMiddleware(c.Handler(r))
+	// CORS middleware - more restrictive configuration
+	allowedOrigins := []string{"http://localhost:3000", "http://localhost:5173"}
+	if envOrigins := os.Getenv("ALLOWED_ORIGINS"); envOrigins != "" {
+		// In production, set ALLOWED_ORIGINS to your actual domain
+		allowedOrigins = []string{envOrigins}
+	}
+	c := cors.New(cors.Options{
+		AllowedOrigins:   allowedOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Requested-With"},
+		AllowCredentials: true,
+		MaxAge:           300, // Cache preflight for 5 minutes
+	})
+	logger.Info("🌐 CORS configured for origins: %v", allowedOrigins)
+
+	// Apply middleware chain (order matters)
+	// Recovery -> RequestID -> Security headers -> Rate limiting -> Request validation -> Max bytes -> Sanitization -> Compression -> Logging -> CORS -> Router
+	handler := middleware.RecoveryMiddleware(
+		middleware.RequestIDMiddleware(
+			middleware.SecurityHeadersMiddleware(
+				middleware.RateLimitMiddleware(rateLimiter)(
+					middleware.ValidateContentTypeMiddleware(
+						middleware.MaxBytesMiddleware(10 * 1024 * 1024)( // 10MB max request size
+							middleware.SanitizeInputMiddleware(
+								middleware.CompressionMiddleware(
+									middleware.LoggingMiddleware(
+										c.Handler(r))))))))))
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -135,6 +240,14 @@ func main() {
 	logger.Info("🌐 Server listening on http://localhost:%s", port)
 	logger.Info("📡 API available at http://localhost:%s/api", port)
 	logger.Info("📚 Swagger UI available at http://localhost:%s/api/docs", port)
+	logger.Info("🛡️  Security features enabled:")
+	logger.Info("   ✓ Panic recovery and error handling")
+	logger.Info("   ✓ Rate limiting (100 req/min per IP)")
+	logger.Info("   ✓ Request size limits (10MB max)")
+	logger.Info("   ✓ Content-Type validation")
+	logger.Info("   ✓ Input sanitization")
+	logger.Info("   ✓ Security headers (XSS, clickjacking, MIME sniffing protection)")
+	logger.Info("   ✓ CORS restrictions")
 	logger.Info("✅ Server ready to accept connections")
 
 	if err := http.ListenAndServe(":"+port, handler); err != nil {

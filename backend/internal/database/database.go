@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nomdb/backend/internal/logger"
@@ -54,8 +55,24 @@ func Connect() error {
 		logger.Debug("Using DATABASE_URL from environment")
 	}
 
-	var err error
-	pool, err = pgxpool.New(context.Background(), dbURL)
+	// Parse the connection string and configure pool settings
+	config, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		logger.Error("❌ Failed to parse database URL: %v", err)
+		return fmt.Errorf("unable to parse database URL: %w", err)
+	}
+
+	// Optimize connection pool settings for performance
+	config.MaxConns = 25                              // Maximum number of connections
+	config.MinConns = 5                               // Minimum number of idle connections
+	config.MaxConnLifetime = time.Hour                // Max connection lifetime (1 hour)
+	config.MaxConnIdleTime = 30 * time.Minute         // Max idle time (30 minutes)
+	config.HealthCheckPeriod = time.Minute            // Health check every minute
+
+	logger.Debug("Pool configuration: MaxConns=%d, MinConns=%d, MaxConnLifetime=%ds, MaxConnIdleTime=%ds",
+		config.MaxConns, config.MinConns, int(config.MaxConnLifetime.Seconds()), int(config.MaxConnIdleTime.Seconds()))
+
+	pool, err = pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		logger.Error("❌ Failed to create database connection pool: %v", err)
 		return fmt.Errorf("unable to connect to database: %w", err)

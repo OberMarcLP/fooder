@@ -11,6 +11,17 @@ import (
 	"github.com/nomdb/backend/internal/models"
 )
 
+// GetRatings godoc
+// @Summary Get ratings for a restaurant
+// @Description Get all ratings for a specific restaurant
+// @Tags Ratings
+// @Accept json
+// @Produce json
+// @Param restaurantId path int true "Restaurant ID"
+// @Success 200 {array} models.Rating "List of ratings"
+// @Failure 400 {object} map[string]string "Invalid restaurant ID"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants/{restaurantId}/ratings [get]
 func GetRatings(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	restaurantID, err := strconv.Atoi(vars["restaurantId"])
@@ -42,6 +53,17 @@ func GetRatings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ratings)
 }
 
+// CreateRating godoc
+// @Summary Create a new rating
+// @Description Create a new rating for a restaurant
+// @Tags Ratings
+// @Accept json
+// @Produce json
+// @Param rating body models.CreateRatingRequest true "Rating creation request"
+// @Success 201 {object} models.Rating "Created rating"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /ratings [post]
 func CreateRating(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateRatingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -87,6 +109,18 @@ func CreateRating(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rt)
 }
 
+// DeleteRating godoc
+// @Summary Delete a rating
+// @Description Delete a rating by ID
+// @Tags Ratings
+// @Accept json
+// @Produce json
+// @Param id path int true "Rating ID"
+// @Success 204 "Rating deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid rating ID"
+// @Failure 404 {object} map[string]string "Rating not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /ratings/{id} [delete]
 func DeleteRating(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])

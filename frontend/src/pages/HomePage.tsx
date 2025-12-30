@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Loader2 } from 'lucide-react';
-import { Restaurant, CreateRestaurantData, CreateSuggestionData, RestaurantFilters, getRestaurants, createSuggestion, updateRestaurant, deleteRestaurant, getRestaurant, convertSuggestion, deleteSuggestion } from '../services/api';
+import { Restaurant, CreateRestaurantData, CreateSuggestionData, RestaurantFilters } from '../services/api';
+import { useRestaurants, useRestaurant, useUpdateRestaurant, useDeleteRestaurant, useCreateSuggestion, useConvertSuggestion, useDeleteSuggestion } from '../hooks/useApi';
 import { RestaurantCard } from '../components/RestaurantCard';
 import { RestaurantForm } from '../components/RestaurantForm';
 import { SuggestionForm } from '../components/SuggestionForm';
@@ -18,85 +19,74 @@ interface HomePageProps {
 export function HomePage({ filters }: HomePageProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAddSuggestionModal, setShowAddSuggestionModal] = useState(false);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(null);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [reviewingSuggestion, setReviewingSuggestion] = useState<Restaurant | null>(null);
   const [rejectingRestaurant, setRejectingRestaurant] = useState<Restaurant | null>(null);
   const [deletingRestaurant, setDeletingRestaurant] = useState<Restaurant | null>(null);
   const [alertMessage, setAlertMessage] = useState<string>('');
 
-  const fetchRestaurants = useCallback(async () => {
-    try {
-      const data = await getRestaurants(filters);
-      setRestaurants(data);
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
-
-  useEffect(() => {
-    fetchRestaurants();
-  }, [fetchRestaurants]);
+  // Use React Query hooks
+  const { data: restaurants = [], isLoading: loading } = useRestaurants(filters);
+  const { data: selectedRestaurant } = useRestaurant(selectedRestaurantId || 0, {
+    enabled: selectedRestaurantId !== null && selectedRestaurantId > 0,
+  });
+  const createSuggestionMutation = useCreateSuggestion();
+  const updateRestaurantMutation = useUpdateRestaurant();
+  const deleteRestaurantMutation = useDeleteRestaurant();
+  const convertSuggestionMutation = useConvertSuggestion();
+  const deleteSuggestionMutation = useDeleteSuggestion();
 
   // Handle restaurant selection from global search
   useEffect(() => {
     const state = location.state as { restaurantId?: number } | null;
     if (state?.restaurantId) {
-      const restaurantId = state.restaurantId;
-      const fetchSelectedRestaurant = async () => {
-        try {
-          const restaurant = await getRestaurant(restaurantId);
-          setSelectedRestaurant(restaurant);
-          // Clear the location state
-          navigate(location.pathname, { replace: true });
-        } catch (error) {
-        }
-      };
-      fetchSelectedRestaurant();
+      setSelectedRestaurantId(state.restaurantId);
+      // Clear the location state
+      navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
 
   const handleCreateSuggestion = async (data: CreateSuggestionData) => {
-    try {
-      await createSuggestion(data);
-      setShowAddSuggestionModal(false);
-      fetchRestaurants();
-    } catch (error: any) {
-      if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
-        setAlertMessage('This restaurant already exists in the database. Please search for it instead.');
-      } else {
-        setAlertMessage('Failed to create suggestion. Please try again.');
-      }
-    }
+    createSuggestionMutation.mutate(data, {
+      onSuccess: () => {
+        setShowAddSuggestionModal(false);
+      },
+      onError: (error: any) => {
+        if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
+          setAlertMessage('This restaurant already exists in the database. Please search for it instead.');
+        } else {
+          setAlertMessage('Failed to create suggestion. Please try again.');
+        }
+      },
+    });
   };
 
   const handleUpdate = async (data: CreateRestaurantData) => {
     if (!editingRestaurant) return;
-    try {
-      await updateRestaurant(editingRestaurant.id, data);
-      setEditingRestaurant(null);
-      fetchRestaurants();
-    } catch (error) {
-    }
+    updateRestaurantMutation.mutate(
+      { id: editingRestaurant.id, data },
+      {
+        onSuccess: () => {
+          setEditingRestaurant(null);
+        },
+      }
+    );
   };
 
   const handleDelete = async () => {
-    setDeletingRestaurant(selectedRestaurant);
+    setDeletingRestaurant(selectedRestaurant || null);
   };
 
   const confirmDelete = async () => {
     if (!deletingRestaurant) return;
-    try {
-      await deleteRestaurant(deletingRestaurant.id);
-      setSelectedRestaurant(null);
-      setDeletingRestaurant(null);
-      fetchRestaurants();
-    } catch (error) {
-    }
+    deleteRestaurantMutation.mutate(deletingRestaurant.id, {
+      onSuccess: () => {
+        setSelectedRestaurantId(null);
+        setDeletingRestaurant(null);
+      },
+    });
   };
 
   const handleReviewSuggestion = (restaurant: Restaurant) => {
@@ -108,15 +98,12 @@ export function HomePage({ filters }: HomePageProps) {
   };
 
   const confirmReject = async () => {
-    if (!rejectingRestaurant) return;
-    try {
-      if (rejectingRestaurant.suggestion_id) {
-        await deleteSuggestion(rejectingRestaurant.suggestion_id);
+    if (!rejectingRestaurant?.suggestion_id) return;
+    deleteSuggestionMutation.mutate(rejectingRestaurant.suggestion_id, {
+      onSuccess: () => {
         setRejectingRestaurant(null);
-        fetchRestaurants();
-      }
-    } catch (error) {
-    }
+      },
+    });
   };
 
   const handleConvertSuggestion = async (data: {
@@ -127,29 +114,38 @@ export function HomePage({ filters }: HomePageProps) {
     description: string;
   }) => {
     if (!reviewingSuggestion?.suggestion_id) return;
-    try {
-      await convertSuggestion(reviewingSuggestion.suggestion_id, {
-        description: data.description || undefined,
-        category_id: reviewingSuggestion.category?.id || undefined,
-        food_rating: data.foodRating,
-        service_rating: data.serviceRating,
-        ambiance_rating: data.ambianceRating,
-        comment: data.comment || undefined,
-      });
-      setReviewingSuggestion(null);
-      fetchRestaurants();
-    } catch (error: any) {
-      if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
-        setAlertMessage('This restaurant already exists in the database. The suggestion will be rejected.');
-        if (reviewingSuggestion?.suggestion_id) {
-          await deleteSuggestion(reviewingSuggestion.suggestion_id);
+    convertSuggestionMutation.mutate(
+      {
+        id: reviewingSuggestion.suggestion_id,
+        data: {
+          description: data.description || undefined,
+          category_id: reviewingSuggestion.category?.id || undefined,
+          food_rating: data.foodRating,
+          service_rating: data.serviceRating,
+          ambiance_rating: data.ambianceRating,
+          comment: data.comment || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
           setReviewingSuggestion(null);
-          fetchRestaurants();
-        }
-      } else {
-        setAlertMessage('Failed to convert suggestion. Please try again.');
+        },
+        onError: (error: any) => {
+          if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
+            setAlertMessage('This restaurant already exists in the database. The suggestion will be rejected.');
+            if (reviewingSuggestion?.suggestion_id) {
+              deleteSuggestionMutation.mutate(reviewingSuggestion.suggestion_id, {
+                onSuccess: () => {
+                  setReviewingSuggestion(null);
+                },
+              });
+            }
+          } else {
+            setAlertMessage('Failed to convert suggestion. Please try again.');
+          }
+        },
       }
-    }
+    );
   };
 
   if (loading) {
@@ -191,7 +187,7 @@ export function HomePage({ filters }: HomePageProps) {
             <RestaurantCard
               key={restaurant.id}
               restaurant={restaurant}
-              onClick={() => setSelectedRestaurant(restaurant)}
+              onClick={() => setSelectedRestaurantId(restaurant.id)}
               onReview={handleReviewSuggestion}
               onReject={handleRejectSuggestion}
             />
@@ -218,8 +214,8 @@ export function HomePage({ filters }: HomePageProps) {
       </Modal>
 
       <Modal
-        isOpen={selectedRestaurant !== null}
-        onClose={() => setSelectedRestaurant(null)}
+        isOpen={selectedRestaurant !== undefined && selectedRestaurant !== null}
+        onClose={() => setSelectedRestaurantId(null)}
         title={selectedRestaurant?.name || ''}
       >
         {selectedRestaurant && (
@@ -227,10 +223,9 @@ export function HomePage({ filters }: HomePageProps) {
             restaurant={selectedRestaurant}
             onEdit={() => {
               setEditingRestaurant(selectedRestaurant);
-              setSelectedRestaurant(null);
+              setSelectedRestaurantId(null);
             }}
             onDelete={handleDelete}
-            onRatingAdded={fetchRestaurants}
           />
         )}
       </Modal>

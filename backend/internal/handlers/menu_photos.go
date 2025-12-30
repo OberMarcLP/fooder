@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,8 +20,9 @@ import (
 )
 
 const (
-	maxUploadSize = 10 << 20 // 10MB
-	uploadsDir    = "./uploads/menu_photos"
+	maxUploadSize    = 5 << 20 // 5MB
+	uploadsDir       = "./uploads/menu_photos"
+	thumbnailsSubdir = "thumbnails"
 )
 
 func init() {
@@ -30,7 +30,16 @@ func init() {
 	os.MkdirAll(uploadsDir, 0755)
 }
 
-// GetMenuPhotos retrieves all photos for a restaurant
+// @Summary Get menu photos for a restaurant
+// @Description Retrieve all menu photos for a specific restaurant with presigned URLs
+// @Tags Photos
+// @Accept json
+// @Produce json
+// @Param restaurantId path int true "Restaurant ID"
+// @Success 200 {array} models.MenuPhoto "List of menu photos"
+// @Failure 400 {object} map[string]string "Invalid restaurant ID"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants/{restaurantId}/photos [get]
 func GetMenuPhotos(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	restaurantID, err := strconv.Atoi(vars["restaurantId"])
@@ -85,7 +94,18 @@ func GetMenuPhotos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(photos)
 }
 
-// UploadMenuPhoto handles file upload for menu photos
+// @Summary Upload a menu photo
+// @Description Upload a menu photo for a restaurant (JPEG, PNG, or WebP, max 5MB)
+// @Tags Photos
+// @Accept multipart/form-data
+// @Produce json
+// @Param restaurantId path int true "Restaurant ID"
+// @Param photo formData file true "Menu photo file"
+// @Param caption formData string true "Photo caption"
+// @Success 201 {object} models.UploadPhotoResponse "Uploaded photo details"
+// @Failure 400 {object} map[string]string "Invalid request or file"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants/{restaurantId}/photos [post]
 func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	restaurantID, err := strconv.Atoi(vars["restaurantId"])
@@ -116,6 +136,12 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Validate file size
+	if header.Size > maxUploadSize {
+		http.Error(w, fmt.Sprintf("File too large. Maximum size is %d MB", maxUploadSize/(1<<20)), http.StatusBadRequest)
+		return
+	}
+
 	// Validate file type
 	contentType := header.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "image/") {
@@ -134,30 +160,37 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate unique filename
-	ext := filepath.Ext(header.Filename)
-	filename := uuid.New().String() + ext
+	// Process image (resize, compress, generate thumbnail)
+	imageProcessor := services.NewImageProcessor()
+	fullImage, thumbnail, err := imageProcessor.ProcessUpload(file, header.Filename)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to process image: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Generate unique filename (always use .jpg extension after processing)
+	filename := uuid.New().String() + ".jpg"
+	thumbnailFilename := uuid.New().String() + "_thumb.jpg"
 
 	ctx := context.Background()
 	s3Service := services.GetS3Service()
-	var fileSize int64
+	var fileSize int64 = int64(len(fullImage))
 	var photoURL string
 
 	if s3Service != nil {
-		// Upload to S3
-		// Read file content into buffer
-		fileBuffer := &bytes.Buffer{}
-		fileSize, err = io.Copy(fileBuffer, file)
+		// Upload full image to S3
+		s3Key := fmt.Sprintf("menu_photos/%s", filename)
+		_, err = s3Service.UploadFile(ctx, s3Key, bytes.NewReader(fullImage), "image/jpeg")
 		if err != nil {
-			http.Error(w, "Failed to read file", http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Failed to upload file to S3: %v", err), http.StatusInternalServerError)
 			return
 		}
 
-		// Upload to S3
-		s3Key := fmt.Sprintf("menu_photos/%s", filename)
-		_, err = s3Service.UploadFile(ctx, s3Key, bytes.NewReader(fileBuffer.Bytes()), contentType)
+		// Upload thumbnail to S3
+		s3ThumbKey := fmt.Sprintf("menu_photos/thumbnails/%s", thumbnailFilename)
+		_, err = s3Service.UploadFile(ctx, s3ThumbKey, bytes.NewReader(thumbnail), "image/jpeg")
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to upload file to S3: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Failed to upload thumbnail to S3: %v", err), http.StatusInternalServerError)
 			return
 		}
 
@@ -170,31 +203,30 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Fallback to local storage
 		filePath := filepath.Join(uploadsDir, filename)
-		dst, err := os.Create(filePath)
-		if err != nil {
+		if err := os.WriteFile(filePath, fullImage, 0644); err != nil {
 			http.Error(w, "Failed to save file", http.StatusInternalServerError)
 			return
 		}
-		defer dst.Close()
 
-		// Copy file content
-		fileSize, err = io.Copy(dst, file)
-		if err != nil {
-			os.Remove(filePath) // Clean up on error
-			http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		// Save thumbnail
+		thumbnailDir := filepath.Join(uploadsDir, thumbnailsSubdir)
+		os.MkdirAll(thumbnailDir, 0755) // Ensure thumbnail directory exists
+		thumbnailPath := filepath.Join(thumbnailDir, thumbnailFilename)
+		if err := os.WriteFile(thumbnailPath, thumbnail, 0644); err != nil {
+			http.Error(w, "Failed to save thumbnail", http.StatusInternalServerError)
 			return
 		}
 
 		photoURL = fmt.Sprintf("/api/uploads/menu_photos/%s", filename)
 	}
 
-	// Save to database
+	// Save to database (always use image/jpeg as mime type after processing)
 	var photo models.MenuPhoto
 	err = database.GetPool().QueryRow(ctx,
 		`INSERT INTO menu_photos (restaurant_id, filename, original_filename, caption, file_size, mime_type)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, restaurant_id, filename, original_filename, caption, file_size, mime_type, created_at, updated_at`,
-		restaurantID, filename, header.Filename, caption, int(fileSize), contentType,
+		restaurantID, filename, header.Filename, caption, int(fileSize), "image/jpeg",
 	).Scan(
 		&photo.ID, &photo.RestaurantID, &photo.Filename, &photo.OriginalFilename,
 		&photo.Caption, &photo.FileSize, &photo.MimeType, &photo.CreatedAt, &photo.UpdatedAt,
@@ -218,7 +250,18 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(models.UploadPhotoResponse{Photo: photo})
 }
 
-// UpdatePhotoCaption updates the caption of a photo
+// @Summary Update photo caption
+// @Description Update the caption of a menu photo
+// @Tags Photos
+// @Accept json
+// @Produce json
+// @Param id path int true "Photo ID"
+// @Param caption body object{caption=string} true "Caption update request"
+// @Success 200 {object} models.MenuPhoto "Updated photo"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 404 {object} map[string]string "Photo not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /photos/{id} [put]
 func UpdatePhotoCaption(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -262,7 +305,17 @@ func UpdatePhotoCaption(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(photo)
 }
 
-// DeleteMenuPhoto deletes a photo
+// @Summary Delete a menu photo
+// @Description Delete a menu photo by ID
+// @Tags Photos
+// @Accept json
+// @Produce json
+// @Param id path int true "Photo ID"
+// @Success 204 "Photo deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid photo ID"
+// @Failure 404 {object} map[string]string "Photo not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /photos/{id} [delete]
 func DeleteMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])

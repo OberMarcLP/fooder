@@ -38,6 +38,82 @@ func getFoodTypesForRestaurant(ctx context.Context, restaurantID int) ([]models.
 	return foodTypes, nil
 }
 
+func getFoodTypesForRestaurantsBatch(ctx context.Context, restaurantIDs []int) (map[int][]models.FoodType, error) {
+	if len(restaurantIDs) == 0 {
+		return make(map[int][]models.FoodType), nil
+	}
+
+	// Build dynamic query with placeholders
+	placeholders := make([]string, len(restaurantIDs))
+	args := make([]interface{}, len(restaurantIDs))
+	for i, id := range restaurantIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT rft.restaurant_id, ft.id, ft.name, ft.created_at, ft.updated_at
+		FROM food_types ft
+		JOIN restaurant_food_types rft ON ft.id = rft.food_type_id
+		WHERE rft.restaurant_id IN (%s)
+		ORDER BY rft.restaurant_id, ft.name`, strings.Join(placeholders, ","))
+
+	rows, err := database.GetPool().Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int][]models.FoodType)
+	for rows.Next() {
+		var restaurantID int
+		var ft models.FoodType
+		if err := rows.Scan(&restaurantID, &ft.ID, &ft.Name, &ft.CreatedAt, &ft.UpdatedAt); err != nil {
+			return nil, err
+		}
+		result[restaurantID] = append(result[restaurantID], ft)
+	}
+	return result, nil
+}
+
+func getFoodTypesForSuggestionsBatch(ctx context.Context, suggestionIDs []int) (map[int][]models.FoodType, error) {
+	if len(suggestionIDs) == 0 {
+		return make(map[int][]models.FoodType), nil
+	}
+
+	// Build dynamic query with placeholders
+	placeholders := make([]string, len(suggestionIDs))
+	args := make([]interface{}, len(suggestionIDs))
+	for i, id := range suggestionIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT sft.suggestion_id, ft.id, ft.name, ft.created_at, ft.updated_at
+		FROM food_types ft
+		JOIN suggestion_food_types sft ON ft.id = sft.food_type_id
+		WHERE sft.suggestion_id IN (%s)
+		ORDER BY sft.suggestion_id, ft.name`, strings.Join(placeholders, ","))
+
+	rows, err := database.GetPool().Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int][]models.FoodType)
+	for rows.Next() {
+		var suggestionID int
+		var ft models.FoodType
+		if err := rows.Scan(&suggestionID, &ft.ID, &ft.Name, &ft.CreatedAt, &ft.UpdatedAt); err != nil {
+			return nil, err
+		}
+		result[suggestionID] = append(result[suggestionID], ft)
+	}
+	return result, nil
+}
+
 func getFoodTypesForSuggestion(ctx context.Context, suggestionID int) ([]models.FoodType, error) {
 	rows, err := database.GetPool().Query(ctx,
 		`SELECT ft.id, ft.name, ft.created_at, ft.updated_at
@@ -81,6 +157,20 @@ func setFoodTypesForRestaurant(ctx context.Context, restaurantID int, foodTypeID
 	return nil
 }
 
+// GetRestaurants godoc
+// @Summary List all restaurants
+// @Description Get a list of all restaurants with optional filtering by category, food types, and location
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Param category_id query int false "Filter by category ID"
+// @Param food_type_ids query string false "Filter by food type IDs (comma-separated)"
+// @Param lat query number false "Latitude for distance filtering"
+// @Param lng query number false "Longitude for distance filtering"
+// @Param radius query number false "Radius in kilometers for distance filtering"
+// @Success 200 {array} models.Restaurant "List of restaurants"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants [get]
 func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
@@ -302,6 +392,9 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	restaurants := []models.Restaurant{}
+	restaurantIDs := []int{}
+	suggestionIDs := []int{}
+
 	for rows.Next() {
 		var rest models.Restaurant
 		var catID *int
@@ -342,19 +435,6 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 			rest.Category = &models.Category{ID: *catID, Name: *catName}
 		}
 
-		// Get food types for this restaurant or suggestion
-		var foodTypes []models.FoodType
-		if rest.IsSuggestion {
-			foodTypes, err = getFoodTypesForSuggestion(ctx, rest.ID)
-		} else {
-			foodTypes, err = getFoodTypesForRestaurant(ctx, rest.ID)
-		}
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		rest.FoodTypes = foodTypes
-
 		if ratingCount > 0 {
 			overall := (avgFood + avgService + avgAmbiance) / 3
 			rest.AvgRating = &models.AvgRating{
@@ -366,13 +446,63 @@ func GetRestaurants(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// Collect IDs for batch food type lookup
+		if rest.IsSuggestion {
+			suggestionIDs = append(suggestionIDs, rest.ID)
+		} else {
+			restaurantIDs = append(restaurantIDs, rest.ID)
+		}
+
 		restaurants = append(restaurants, rest)
+	}
+
+	// Batch fetch food types for all restaurants
+	restaurantFoodTypes := make(map[int][]models.FoodType)
+	if len(restaurantIDs) > 0 {
+		foodTypeMap, err := getFoodTypesForRestaurantsBatch(ctx, restaurantIDs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		restaurantFoodTypes = foodTypeMap
+	}
+
+	// Batch fetch food types for all suggestions
+	suggestionFoodTypes := make(map[int][]models.FoodType)
+	if len(suggestionIDs) > 0 {
+		foodTypeMap, err := getFoodTypesForSuggestionsBatch(ctx, suggestionIDs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		suggestionFoodTypes = foodTypeMap
+	}
+
+	// Assign food types to restaurants
+	for i := range restaurants {
+		if restaurants[i].IsSuggestion {
+			restaurants[i].FoodTypes = suggestionFoodTypes[restaurants[i].ID]
+		} else {
+			restaurants[i].FoodTypes = restaurantFoodTypes[restaurants[i].ID]
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(restaurants)
 }
 
+// GetRestaurant godoc
+// @Summary Get a restaurant by ID
+// @Description Get detailed information about a specific restaurant including ratings and food types
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Param id path int true "Restaurant ID"
+// @Success 200 {object} models.Restaurant "Restaurant details"
+// @Failure 400 {object} map[string]string "Invalid restaurant ID"
+// @Failure 404 {object} map[string]string "Restaurant not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants/{id} [get]
 func GetRestaurant(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -442,6 +572,18 @@ func GetRestaurant(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rest)
 }
 
+// CreateRestaurant godoc
+// @Summary Create a new restaurant
+// @Description Create a new restaurant with details and food types
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Param restaurant body models.CreateRestaurantRequest true "Restaurant creation request"
+// @Success 201 {object} models.Restaurant "Created restaurant"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 409 {object} map[string]string "Restaurant already exists"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants [post]
 func CreateRestaurant(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateRestaurantRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -501,6 +643,19 @@ func CreateRestaurant(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rest)
 }
 
+// UpdateRestaurant godoc
+// @Summary Update a restaurant
+// @Description Update an existing restaurant's information
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Param id path int true "Restaurant ID"
+// @Param restaurant body models.UpdateRestaurantRequest true "Restaurant update request"
+// @Success 200 {object} models.Restaurant "Updated restaurant"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 404 {object} map[string]string "Restaurant not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants/{id} [put]
 func UpdateRestaurant(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -557,6 +712,18 @@ func UpdateRestaurant(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rest)
 }
 
+// DeleteRestaurant godoc
+// @Summary Delete a restaurant
+// @Description Delete a restaurant by ID
+// @Tags Restaurants
+// @Accept json
+// @Produce json
+// @Param id path int true "Restaurant ID"
+// @Success 204 "Restaurant deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid restaurant ID"
+// @Failure 404 {object} map[string]string "Restaurant not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /restaurants/{id} [delete]
 func DeleteRestaurant(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -580,7 +747,17 @@ func DeleteRestaurant(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GlobalSearch searches both restaurants and suggestions by name
+// GlobalSearch godoc
+// @Summary Global search for restaurants and suggestions
+// @Description Search both restaurants and suggestions by name with pattern matching
+// @Tags Search
+// @Accept json
+// @Produce json
+// @Param q query string true "Search query string"
+// @Success 200 {array} models.Restaurant "List of matching restaurants and suggestions"
+// @Failure 400 {object} map[string]string "Query parameter 'q' is required"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /search [get]
 func GlobalSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
@@ -638,6 +815,9 @@ func GlobalSearch(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	results := []models.Restaurant{}
+	restaurantIDs := []int{}
+	suggestionIDs := []int{}
+
 	for rows.Next() {
 		var rest models.Restaurant
 		var restaurantID *int
@@ -674,15 +854,6 @@ func GlobalSearch(w http.ResponseWriter, r *http.Request) {
 		rest.SuggestionID = suggestionID
 		rest.Status = status
 
-		// Get food types
-		if isSuggestion && suggestionID != nil {
-			foodTypes, _ := getFoodTypesForSuggestion(ctx, *suggestionID)
-			rest.FoodTypes = foodTypes
-		} else if rest.ID > 0 {
-			foodTypes, _ := getFoodTypesForRestaurant(ctx, rest.ID)
-			rest.FoodTypes = foodTypes
-		}
-
 		if ratingCount > 0 {
 			overall := (avgFood + avgService + avgAmbiance) / 3
 			rest.AvgRating = &models.AvgRating{
@@ -694,7 +865,45 @@ func GlobalSearch(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// Collect IDs for batch food type lookup
+		if isSuggestion && suggestionID != nil {
+			suggestionIDs = append(suggestionIDs, *suggestionID)
+		} else if rest.ID > 0 {
+			restaurantIDs = append(restaurantIDs, rest.ID)
+		}
+
 		results = append(results, rest)
+	}
+
+	// Batch fetch food types for all restaurants
+	restaurantFoodTypes := make(map[int][]models.FoodType)
+	if len(restaurantIDs) > 0 {
+		foodTypeMap, err := getFoodTypesForRestaurantsBatch(ctx, restaurantIDs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		restaurantFoodTypes = foodTypeMap
+	}
+
+	// Batch fetch food types for all suggestions
+	suggestionFoodTypes := make(map[int][]models.FoodType)
+	if len(suggestionIDs) > 0 {
+		foodTypeMap, err := getFoodTypesForSuggestionsBatch(ctx, suggestionIDs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		suggestionFoodTypes = foodTypeMap
+	}
+
+	// Assign food types to results
+	for i := range results {
+		if results[i].IsSuggestion && results[i].SuggestionID != nil {
+			results[i].FoodTypes = suggestionFoodTypes[*results[i].SuggestionID]
+		} else if results[i].ID > 0 {
+			results[i].FoodTypes = restaurantFoodTypes[results[i].ID]
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -10,6 +10,16 @@ import (
 
 var mapsService = services.NewGoogleMapsService()
 
+// @Summary Search for places
+// @Description Search for places using Google Maps Places API
+// @Tags Google Maps
+// @Accept json
+// @Produce json
+// @Param q query string true "Search query"
+// @Success 200 {array} models.GooglePlaceResult "List of matching places"
+// @Failure 400 {object} map[string]string "Missing query parameter"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /places/search [get]
 func SearchPlaces(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
@@ -27,6 +37,16 @@ func SearchPlaces(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+// @Summary Geocode cities
+// @Description Geocode city names to get coordinates using Google Maps Geocoding API
+// @Tags Google Maps
+// @Accept json
+// @Produce json
+// @Param q query string true "City name to geocode"
+// @Success 200 {array} models.GooglePlaceResult "List of geocoded cities"
+// @Failure 400 {object} map[string]string "Missing query parameter"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /geocode/cities [get]
 func GeocodeCities(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
@@ -44,6 +64,16 @@ func GeocodeCities(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+// @Summary Get place details
+// @Description Get detailed information about a place using Google Maps Place Details API
+// @Tags Google Maps
+// @Accept json
+// @Produce json
+// @Param placeId path string true "Google Place ID"
+// @Success 200 {object} models.GooglePlaceResult "Place details"
+// @Failure 400 {object} map[string]string "Missing place ID"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /places/{placeId} [get]
 func GetPlaceDetails(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	placeID := vars["placeId"]

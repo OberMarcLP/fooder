@@ -1,865 +1,1558 @@
-openapi: 3.0.3
+basePath: /api
+definitions:
+  models.AvgRating:
+    properties:
+      ambiance:
+        type: number
+      count:
+        type: integer
+      food:
+        type: number
+      overall:
+        type: number
+      service:
+        type: number
+    type: object
+  models.Category:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ConvertSuggestionRequest:
+    properties:
+      ambiance_rating:
+        type: integer
+      category_id:
+        type: integer
+      comment:
+        type: string
+      description:
+        type: string
+      food_rating:
+        type: integer
+      service_rating:
+        type: integer
+    type: object
+  models.CreateCategoryRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  models.CreateFoodTypeRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  models.CreateRatingRequest:
+    properties:
+      ambiance_rating:
+        type: integer
+      comment:
+        type: string
+      food_rating:
+        type: integer
+      restaurant_id:
+        type: integer
+      service_rating:
+        type: integer
+    type: object
+  models.CreateRestaurantRequest:
+    properties:
+      address:
+        type: string
+      category_id:
+        type: integer
+      description:
+        type: string
+      food_type_ids:
+        items:
+          type: integer
+        type: array
+      google_place_id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone:
+        type: string
+      website:
+        type: string
+    type: object
+  models.CreateSuggestionRequest:
+    properties:
+      address:
+        type: string
+      food_type_ids:
+        items:
+          type: integer
+        type: array
+      google_place_id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      notes:
+        type: string
+      phone:
+        type: string
+      suggested_category_id:
+        type: integer
+      website:
+        type: string
+    type: object
+  models.FoodType:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.GooglePlaceResult:
+    properties:
+      address:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone:
+        type: string
+      place_id:
+        type: string
+      website:
+        type: string
+    type: object
+  models.MenuPhoto:
+    properties:
+      caption:
+        type: string
+      created_at:
+        type: string
+      file_size:
+        type: integer
+      filename:
+        type: string
+      id:
+        type: integer
+      mime_type:
+        type: string
+      original_filename:
+        type: string
+      restaurant_id:
+        type: integer
+      updated_at:
+        type: string
+      url:
+        description: Computed field
+        type: string
+    type: object
+  models.PaginatedResponse:
+    properties:
+      data: {}
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+      total:
+        type: integer
+    type: object
+  models.Rating:
+    properties:
+      ambiance_rating:
+        type: integer
+      comment:
+        type: string
+      created_at:
+        type: string
+      food_rating:
+        type: integer
+      id:
+        type: integer
+      restaurant_id:
+        type: integer
+      service_rating:
+        type: integer
+    type: object
+  models.Restaurant:
+    properties:
+      address:
+        type: string
+      avg_rating:
+        $ref: '#/definitions/models.AvgRating'
+      category:
+        $ref: '#/definitions/models.Category'
+      category_id:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      distance:
+        description: Distance in km from search location
+        type: number
+      food_types:
+        items:
+          $ref: '#/definitions/models.FoodType'
+        type: array
+      google_place_id:
+        type: string
+      id:
+        type: integer
+      is_suggestion:
+        description: Indicates if this is from suggestions table
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone:
+        type: string
+      status:
+        description: 'For suggestions: pending, approved, tested, rejected'
+        type: string
+      suggestion_id:
+        type: integer
+      updated_at:
+        type: string
+      website:
+        type: string
+    type: object
+  models.RestaurantSuggestion:
+    properties:
+      address:
+        type: string
+      category:
+        $ref: '#/definitions/models.Category'
+      created_at:
+        type: string
+      food_types:
+        items:
+          $ref: '#/definitions/models.FoodType'
+        type: array
+      google_place_id:
+        type: string
+      id:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      notes:
+        type: string
+      phone:
+        type: string
+      status:
+        type: string
+      suggested_category_id:
+        type: integer
+      updated_at:
+        type: string
+      website:
+        type: string
+    type: object
+  models.UpdateRestaurantRequest:
+    properties:
+      address:
+        type: string
+      category_id:
+        type: integer
+      description:
+        type: string
+      food_type_ids:
+        items:
+          type: integer
+        type: array
+      google_place_id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      phone:
+        type: string
+      website:
+        type: string
+    type: object
+  models.UpdateSuggestionStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
+  models.UploadPhotoResponse:
+    properties:
+      photo:
+        $ref: '#/definitions/models.MenuPhoto'
+    type: object
+host: localhost:8080
 info:
-  title: The Nom Database API
-  description: Restaurant rating application API with Google Maps integration
-  version: 1.0.0
   contact:
-    name: The Nom Database
-servers:
-  - url: http://localhost:8080/api
-    description: Local development server
+    email: support@nomdb.com
+    name: API Support
+    url: https://github.com/your-username/the-nom-database
+  description: |-
+    Restaurant rating and discovery API with Google Maps integration
 
-tags:
-  - name: Health
-    description: Health check endpoints
-  - name: Restaurants
-    description: Restaurant management
-  - name: Ratings
-    description: Restaurant ratings
-  - name: Categories
-    description: Cultural categories
-  - name: Food Types
-    description: Food type management
-  - name: Google Maps
-    description: Google Maps integration
-  - name: Suggestions
-    description: Restaurant suggestions
-  - name: Menu Photos
-    description: Menu photo uploads
-
+    This API provides endpoints for managing restaurants, ratings, categories, and food types.
+    It integrates with Google Maps for restaurant search and location data.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: The Nom Database API
+  version: "1.0"
 paths:
-  /health:
-    get:
-      tags:
-        - Health
-      summary: Health check
-      description: Check if the API is running
-      responses:
-        '200':
-          description: API is healthy
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: ok
-
-  /restaurants:
-    get:
-      tags:
-        - Restaurants
-      summary: List all restaurants
-      description: Get a list of all restaurants with optional filters
-      parameters:
-        - name: category_id
-          in: query
-          schema:
-            type: integer
-        - name: food_type_id
-          in: query
-          schema:
-            type: integer
-        - name: include_suggestions
-          in: query
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: List of restaurants
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Restaurant'
-
-    post:
-      tags:
-        - Restaurants
-      summary: Create a new restaurant
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRestaurant'
-      responses:
-        '201':
-          description: Restaurant created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Restaurant'
-        '400':
-          description: Invalid input
-        '409':
-          description: Restaurant already exists
-
-  /restaurants/{id}:
-    get:
-      tags:
-        - Restaurants
-      summary: Get restaurant by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Restaurant details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Restaurant'
-        '404':
-          description: Restaurant not found
-
-    put:
-      tags:
-        - Restaurants
-      summary: Update a restaurant
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRestaurant'
-      responses:
-        '200':
-          description: Restaurant updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Restaurant'
-        '404':
-          description: Restaurant not found
-
-    delete:
-      tags:
-        - Restaurants
-      summary: Delete a restaurant
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Restaurant deleted
-        '404':
-          description: Restaurant not found
-
-  /restaurants/{id}/ratings:
-    get:
-      tags:
-        - Ratings
-      summary: Get restaurant ratings
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: List of ratings
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Rating'
-
-  /ratings:
-    post:
-      tags:
-        - Ratings
-      summary: Create a new rating
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRating'
-      responses:
-        '201':
-          description: Rating created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Rating'
-        '400':
-          description: Invalid input
-
-  /ratings/{id}:
-    delete:
-      tags:
-        - Ratings
-      summary: Delete a rating
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Rating deleted
-        '404':
-          description: Rating not found
-
   /categories:
     get:
-      tags:
-        - Categories
-      summary: List all categories
+      consumes:
+      - application/json
+      description: Get a list of all cultural categories
+      produces:
+      - application/json
       responses:
-        '200':
+        "200":
           description: List of categories
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Category'
-
+          schema:
+            items:
+              $ref: '#/definitions/models.Category'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all categories
+      tags:
+      - Categories
     post:
-      tags:
-        - Categories
+      consumes:
+      - application/json
+      description: Create a new cultural category with the provided name
+      parameters:
+      - description: Category creation request
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created category
+          schema:
+            $ref: '#/definitions/models.Category'
+        "400":
+          description: Invalid request body or name is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Create a new category
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-      responses:
-        '201':
-          description: Category created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Category'
-
+      tags:
+      - Categories
   /categories/{id}:
-    put:
-      tags:
-        - Categories
-      summary: Update a category
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-      responses:
-        '200':
-          description: Category updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Category'
-
     delete:
-      tags:
-        - Categories
-      summary: Delete a category
+      consumes:
+      - application/json
+      description: Delete a category by ID
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
       responses:
-        '204':
-          description: Category deleted
-
+        "204":
+          description: Category deleted successfully
+        "400":
+          description: Invalid category ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a category
+      tags:
+      - Categories
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific category
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category details
+          schema:
+            $ref: '#/definitions/models.Category'
+        "400":
+          description: Invalid category ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a category by ID
+      tags:
+      - Categories
+    put:
+      consumes:
+      - application/json
+      description: Update an existing category's name
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Category update request
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated category
+          schema:
+            $ref: '#/definitions/models.Category'
+        "400":
+          description: Invalid request or name is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a category
+      tags:
+      - Categories
   /food-types:
     get:
-      tags:
-        - Food Types
-      summary: List all food types
+      consumes:
+      - application/json
+      description: Get a list of all food types ordered by name
+      produces:
+      - application/json
       responses:
-        '200':
+        "200":
           description: List of food types
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/FoodType'
-
-    post:
+          schema:
+            items:
+              $ref: '#/definitions/models.FoodType'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all food types
       tags:
-        - Food Types
+      - Food Types
+    post:
+      consumes:
+      - application/json
+      description: Create a new food type with the provided name
+      parameters:
+      - description: Food type creation request
+        in: body
+        name: foodType
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateFoodTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created food type
+          schema:
+            $ref: '#/definitions/models.FoodType'
+        "400":
+          description: Invalid request body or name is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Create a new food type
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-      responses:
-        '201':
-          description: Food type created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FoodType'
-
+      tags:
+      - Food Types
   /food-types/{id}:
-    put:
-      tags:
-        - Food Types
-      summary: Update a food type
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-      responses:
-        '200':
-          description: Food type updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FoodType'
-
     delete:
-      tags:
-        - Food Types
+      consumes:
+      - application/json
+      description: Delete a food type by ID
+      parameters:
+      - description: Food Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Food type deleted successfully
+        "400":
+          description: Invalid food type ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Food type not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Delete a food type
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Food type deleted
-
-  /places/search:
+      tags:
+      - Food Types
     get:
-      tags:
-        - Google Maps
-      summary: Search for places using Google Maps
+      consumes:
+      - application/json
+      description: Get detailed information about a specific food type
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query
-      responses:
-        '200':
-          description: List of places
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Place'
-
-  /places/{placeId}:
-    get:
-      tags:
-        - Google Maps
-      summary: Get place details by Google Place ID
-      parameters:
-        - name: placeId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Place details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PlaceDetail'
-
-  /suggestions:
-    get:
-      tags:
-        - Suggestions
-      summary: List all restaurant suggestions
-      responses:
-        '200':
-          description: List of suggestions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Suggestion'
-
-    post:
-      tags:
-        - Suggestions
-      summary: Create a new suggestion
-      requestBody:
+      - description: Food Type ID
+        in: path
+        name: id
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateSuggestion'
+        type: integer
+      produces:
+      - application/json
       responses:
-        '201':
-          description: Suggestion created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Suggestion'
-        '409':
-          description: Restaurant already exists
-
-  /suggestions/{id}:
+        "200":
+          description: Food type details
+          schema:
+            $ref: '#/definitions/models.FoodType'
+        "400":
+          description: Invalid food type ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Food type not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a food type by ID
+      tags:
+      - Food Types
     put:
-      tags:
-        - Suggestions
-      summary: Update a suggestion
+      consumes:
+      - application/json
+      description: Update an existing food type's name
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
+      - description: Food Type ID
+        in: path
+        name: id
         required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  enum: [pending, approved, tested, rejected]
-      responses:
-        '200':
-          description: Suggestion updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Suggestion'
-
-    delete:
-      tags:
-        - Suggestions
-      summary: Delete a suggestion
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Suggestion deleted
-
-  /suggestions/{id}/convert:
-    post:
-      tags:
-        - Suggestions
-      summary: Convert suggestion to restaurant
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
+        type: integer
+      - description: Food type update request
+        in: body
+        name: foodType
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConvertSuggestion'
+        schema:
+          $ref: '#/definitions/models.CreateFoodTypeRequest'
+      produces:
+      - application/json
       responses:
-        '201':
-          description: Suggestion converted to restaurant
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Restaurant'
-
-  /restaurants/{id}/photos:
-    post:
-      tags:
-        - Menu Photos
-      summary: Upload a menu photo
-      parameters:
-        - name: id
-          in: path
-          required: true
+        "200":
+          description: Updated food type
           schema:
-            type: integer
-      requestBody:
+            $ref: '#/definitions/models.FoodType'
+        "400":
+          description: Invalid request or name is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Food type not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a food type
+      tags:
+      - Food Types
+  /geocode/cities:
+    get:
+      consumes:
+      - application/json
+      description: Geocode city names to get coordinates using Google Maps Geocoding
+        API
+      parameters:
+      - description: City name to geocode
+        in: query
+        name: q
         required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                photo:
-                  type: string
-                  format: binary
-                caption:
-                  type: string
+        type: string
+      produces:
+      - application/json
       responses:
-        '201':
-          description: Photo uploaded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MenuPhoto'
-
+        "200":
+          description: List of geocoded cities
+          schema:
+            items:
+              $ref: '#/definitions/models.GooglePlaceResult'
+            type: array
+        "400":
+          description: Missing query parameter
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Geocode cities
+      tags:
+      - Google Maps
   /photos/{id}:
     delete:
-      tags:
-        - Menu Photos
-      summary: Delete a menu photo
+      consumes:
+      - application/json
+      description: Delete a menu photo by ID
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
+      - description: Photo ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
       responses:
-        '204':
-          description: Photo deleted
-
-components:
-  schemas:
-    Restaurant:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        address:
-          type: string
-        phone:
-          type: string
-        website:
-          type: string
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        google_place_id:
-          type: string
-        description:
-          type: string
-        category:
-          $ref: '#/components/schemas/Category'
-        food_type:
-          $ref: '#/components/schemas/FoodType'
-        avg_food_rating:
-          type: number
-          format: double
-        avg_service_rating:
-          type: number
-          format: double
-        avg_ambiance_rating:
-          type: number
-          format: double
-        avg_overall_rating:
-          type: number
-          format: double
-        rating_count:
-          type: integer
-        menu_photos:
-          type: array
-          items:
-            $ref: '#/components/schemas/MenuPhoto'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    CreateRestaurant:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-        address:
-          type: string
-        phone:
-          type: string
-        website:
-          type: string
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        google_place_id:
-          type: string
-        description:
-          type: string
-        category_id:
-          type: integer
-        food_type_id:
-          type: integer
-
-    Rating:
-      type: object
-      properties:
-        id:
-          type: integer
-        restaurant_id:
-          type: integer
-        food_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        service_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        ambiance_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        overall_rating:
-          type: number
-          format: double
-        comment:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-
-    CreateRating:
-      type: object
-      required:
-        - restaurant_id
-        - food_rating
-        - service_rating
-        - ambiance_rating
-      properties:
-        restaurant_id:
-          type: integer
-        food_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        service_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        ambiance_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        comment:
-          type: string
-
-    Category:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-
-    FoodType:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-
-    Place:
-      type: object
-      properties:
-        place_id:
-          type: string
-        name:
-          type: string
-        formatted_address:
-          type: string
-        rating:
-          type: number
-          format: double
-        user_ratings_total:
-          type: integer
-
-    PlaceDetail:
-      type: object
-      properties:
-        place_id:
-          type: string
-        name:
-          type: string
-        formatted_address:
-          type: string
-        formatted_phone_number:
-          type: string
-        website:
-          type: string
-        rating:
-          type: number
-          format: double
-        user_ratings_total:
-          type: integer
-        lat:
-          type: number
-          format: double
-        lng:
-          type: number
-          format: double
-
-    Suggestion:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        address:
-          type: string
-        phone:
-          type: string
-        website:
-          type: string
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        google_place_id:
-          type: string
-        suggested_category_id:
-          type: integer
-        notes:
-          type: string
-        status:
-          type: string
-          enum: [pending, approved, tested, rejected]
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    CreateSuggestion:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-        address:
-          type: string
-        phone:
-          type: string
-        website:
-          type: string
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        google_place_id:
-          type: string
-        suggested_category_id:
-          type: integer
-        notes:
-          type: string
-
-    ConvertSuggestion:
-      type: object
-      properties:
-        description:
-          type: string
-        category_id:
-          type: integer
-        food_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        service_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        ambiance_rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-        comment:
-          type: string
-
-    MenuPhoto:
-      type: object
-      properties:
-        id:
-          type: integer
-        restaurant_id:
-          type: integer
-        url:
-          type: string
-        caption:
-          type: string
-        file_size:
-          type: integer
-        created_at:
-          type: string
-          format: date-time
+        "204":
+          description: Photo deleted successfully
+        "400":
+          description: Invalid photo ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Photo not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a menu photo
+      tags:
+      - Photos
+    put:
+      consumes:
+      - application/json
+      description: Update the caption of a menu photo
+      parameters:
+      - description: Photo ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Caption update request
+        in: body
+        name: caption
+        required: true
+        schema:
+          properties:
+            caption:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated photo
+          schema:
+            $ref: '#/definitions/models.MenuPhoto'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Photo not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update photo caption
+      tags:
+      - Photos
+  /places/{placeId}:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a place using Google Maps Place
+        Details API
+      parameters:
+      - description: Google Place ID
+        in: path
+        name: placeId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Place details
+          schema:
+            $ref: '#/definitions/models.GooglePlaceResult'
+        "400":
+          description: Missing place ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get place details
+      tags:
+      - Google Maps
+  /places/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for places using Google Maps Places API
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of matching places
+          schema:
+            items:
+              $ref: '#/definitions/models.GooglePlaceResult'
+            type: array
+        "400":
+          description: Missing query parameter
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search for places
+      tags:
+      - Google Maps
+  /ratings:
+    post:
+      consumes:
+      - application/json
+      description: Create a new rating for a restaurant
+      parameters:
+      - description: Rating creation request
+        in: body
+        name: rating
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateRatingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created rating
+          schema:
+            $ref: '#/definitions/models.Rating'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new rating
+      tags:
+      - Ratings
+  /ratings/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a rating by ID
+      parameters:
+      - description: Rating ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Rating deleted successfully
+        "400":
+          description: Invalid rating ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Rating not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a rating
+      tags:
+      - Ratings
+  /restaurants:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all restaurants with optional filtering by category,
+        food types, and location
+      parameters:
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: integer
+      - description: Filter by food type IDs (comma-separated)
+        in: query
+        name: food_type_ids
+        type: string
+      - description: Latitude for distance filtering
+        in: query
+        name: lat
+        type: number
+      - description: Longitude for distance filtering
+        in: query
+        name: lng
+        type: number
+      - description: Radius in kilometers for distance filtering
+        in: query
+        name: radius
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of restaurants
+          schema:
+            items:
+              $ref: '#/definitions/models.Restaurant'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all restaurants
+      tags:
+      - Restaurants
+    post:
+      consumes:
+      - application/json
+      description: Create a new restaurant with details and food types
+      parameters:
+      - description: Restaurant creation request
+        in: body
+        name: restaurant
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateRestaurantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created restaurant
+          schema:
+            $ref: '#/definitions/models.Restaurant'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Restaurant already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new restaurant
+      tags:
+      - Restaurants
+  /restaurants/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a restaurant by ID
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Restaurant deleted successfully
+        "400":
+          description: Invalid restaurant ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Restaurant not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a restaurant
+      tags:
+      - Restaurants
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific restaurant including
+        ratings and food types
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Restaurant details
+          schema:
+            $ref: '#/definitions/models.Restaurant'
+        "400":
+          description: Invalid restaurant ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Restaurant not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a restaurant by ID
+      tags:
+      - Restaurants
+    put:
+      consumes:
+      - application/json
+      description: Update an existing restaurant's information
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Restaurant update request
+        in: body
+        name: restaurant
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateRestaurantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated restaurant
+          schema:
+            $ref: '#/definitions/models.Restaurant'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Restaurant not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a restaurant
+      tags:
+      - Restaurants
+  /restaurants/{restaurantId}/photos:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all menu photos for a specific restaurant with presigned
+        URLs
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: restaurantId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of menu photos
+          schema:
+            items:
+              $ref: '#/definitions/models.MenuPhoto'
+            type: array
+        "400":
+          description: Invalid restaurant ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get menu photos for a restaurant
+      tags:
+      - Photos
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a menu photo for a restaurant (JPEG, PNG, or WebP, max 5MB)
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: restaurantId
+        required: true
+        type: integer
+      - description: Menu photo file
+        in: formData
+        name: photo
+        required: true
+        type: file
+      - description: Photo caption
+        in: formData
+        name: caption
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Uploaded photo details
+          schema:
+            $ref: '#/definitions/models.UploadPhotoResponse'
+        "400":
+          description: Invalid request or file
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upload a menu photo
+      tags:
+      - Photos
+  /restaurants/{restaurantId}/ratings:
+    get:
+      consumes:
+      - application/json
+      description: Get all ratings for a specific restaurant
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: restaurantId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of ratings
+          schema:
+            items:
+              $ref: '#/definitions/models.Rating'
+            type: array
+        "400":
+          description: Invalid restaurant ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get ratings for a restaurant
+      tags:
+      - Ratings
+  /restaurants/paginated:
+    get:
+      consumes:
+      - application/json
+      description: Get restaurants with cursor-based pagination and optional filtering
+        by category, food types, and search query
+      parameters:
+      - description: Pagination cursor (encoded last ID)
+        in: query
+        name: cursor
+        type: string
+      - description: Number of items per page (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: integer
+      - description: Filter by food type IDs (comma-separated)
+        in: query
+        name: food_type_ids
+        type: string
+      - description: Search query for name or description
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Paginated list of restaurants
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse'
+        "400":
+          description: Invalid cursor or parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get paginated list of restaurants
+      tags:
+      - Restaurants
+  /search:
+    get:
+      consumes:
+      - application/json
+      description: Search both restaurants and suggestions by name with pattern matching
+      parameters:
+      - description: Search query string
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of matching restaurants and suggestions
+          schema:
+            items:
+              $ref: '#/definitions/models.Restaurant'
+            type: array
+        "400":
+          description: Query parameter 'q' is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Global search for restaurants and suggestions
+      tags:
+      - Search
+  /suggestions:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all restaurant suggestions with optional status filter
+      parameters:
+      - description: Filter by status (pending, approved, tested, rejected)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of suggestions
+          schema:
+            items:
+              $ref: '#/definitions/models.RestaurantSuggestion'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all restaurant suggestions
+      tags:
+      - Suggestions
+    post:
+      consumes:
+      - application/json
+      description: Create a new restaurant suggestion with details and optional food
+        types
+      parameters:
+      - description: Suggestion creation request
+        in: body
+        name: suggestion
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateSuggestionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created suggestion
+          schema:
+            $ref: '#/definitions/models.RestaurantSuggestion'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Suggestion already exists or restaurant exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new restaurant suggestion
+      tags:
+      - Suggestions
+  /suggestions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a restaurant suggestion by ID
+      parameters:
+      - description: Suggestion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Suggestion deleted successfully
+        "400":
+          description: Invalid suggestion ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a suggestion
+      tags:
+      - Suggestions
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific restaurant suggestion
+      parameters:
+      - description: Suggestion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Suggestion details
+          schema:
+            $ref: '#/definitions/models.RestaurantSuggestion'
+        "400":
+          description: Invalid suggestion ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a suggestion by ID
+      tags:
+      - Suggestions
+  /suggestions/{id}/convert:
+    post:
+      consumes:
+      - application/json
+      description: Convert a restaurant suggestion to a permanent restaurant with
+        initial ratings
+      parameters:
+      - description: Suggestion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Conversion request with ratings
+        in: body
+        name: conversion
+        required: true
+        schema:
+          $ref: '#/definitions/models.ConvertSuggestionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Conversion result with restaurant_id
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or ratings
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Convert suggestion to restaurant
+      tags:
+      - Suggestions
+  /suggestions/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of a restaurant suggestion (pending, approved,
+        tested, rejected)
+      parameters:
+      - description: Suggestion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Status update request
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateSuggestionStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated suggestion
+          schema:
+            $ref: '#/definitions/models.RestaurantSuggestion'
+        "400":
+          description: Invalid request or status
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update suggestion status
+      tags:
+      - Suggestions
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

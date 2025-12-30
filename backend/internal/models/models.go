@@ -99,7 +99,20 @@ type CreateFoodTypeRequest struct {
 	Name string `json:"name"`
 }
 
-type GooglePlaceResult struct {
+// Pagination types
+type PaginationParams struct {
+	Limit  int    `json:"limit"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
+type PaginatedResponse struct {
+	Data       interface{} `json:"data"`
+	NextCursor *string     `json:"next_cursor,omitempty"`
+	HasMore    bool        `json:"has_more"`
+	Total      *int        `json:"total,omitempty"`
+}
+
+type GooglePlaceResult struct{
 	PlaceID   string  `json:"place_id"`
 	Name      string  `json:"name"`
 	Address   string  `json:"address"`

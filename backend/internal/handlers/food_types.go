@@ -11,6 +11,15 @@ import (
 	"github.com/nomdb/backend/internal/models"
 )
 
+// GetFoodTypes godoc
+// @Summary List all food types
+// @Description Get a list of all food types ordered by name
+// @Tags Food Types
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.FoodType "List of food types"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /food-types [get]
 func GetFoodTypes(w http.ResponseWriter, r *http.Request) {
 	rows, err := database.GetPool().Query(context.Background(),
 		"SELECT id, name, created_at, updated_at FROM food_types ORDER BY name")
@@ -34,6 +43,17 @@ func GetFoodTypes(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(foodTypes)
 }
 
+// GetFoodType godoc
+// @Summary Get a food type by ID
+// @Description Get detailed information about a specific food type
+// @Tags Food Types
+// @Accept json
+// @Produce json
+// @Param id path int true "Food Type ID"
+// @Success 200 {object} models.FoodType "Food type details"
+// @Failure 400 {object} map[string]string "Invalid food type ID"
+// @Failure 404 {object} map[string]string "Food type not found"
+// @Router /food-types/{id} [get]
 func GetFoodType(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -55,6 +75,17 @@ func GetFoodType(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ft)
 }
 
+// CreateFoodType godoc
+// @Summary Create a new food type
+// @Description Create a new food type with the provided name
+// @Tags Food Types
+// @Accept json
+// @Produce json
+// @Param foodType body models.CreateFoodTypeRequest true "Food type creation request"
+// @Success 201 {object} models.FoodType "Created food type"
+// @Failure 400 {object} map[string]string "Invalid request body or name is required"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /food-types [post]
 func CreateFoodType(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateFoodTypeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -81,6 +112,18 @@ func CreateFoodType(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ft)
 }
 
+// UpdateFoodType godoc
+// @Summary Update a food type
+// @Description Update an existing food type's name
+// @Tags Food Types
+// @Accept json
+// @Produce json
+// @Param id path int true "Food Type ID"
+// @Param foodType body models.CreateFoodTypeRequest true "Food type update request"
+// @Success 200 {object} models.FoodType "Updated food type"
+// @Failure 400 {object} map[string]string "Invalid request or name is required"
+// @Failure 404 {object} map[string]string "Food type not found"
+// @Router /food-types/{id} [put]
 func UpdateFoodType(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -113,6 +156,18 @@ func UpdateFoodType(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ft)
 }
 
+// DeleteFoodType godoc
+// @Summary Delete a food type
+// @Description Delete a food type by ID
+// @Tags Food Types
+// @Accept json
+// @Produce json
+// @Param id path int true "Food Type ID"
+// @Success 204 "Food type deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid food type ID"
+// @Failure 404 {object} map[string]string "Food type not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /food-types/{id} [delete]
 func DeleteFoodType(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
