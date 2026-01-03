@@ -1,10 +1,7 @@
 version: '3.8'
 
-# This docker-compose file uses pre-built images from GitHub Container Registry
-# No building required - just pull and run!
-#
-# Usage:
-#   docker compose -f docker-compose.prebuilt.yml up -d
+# Development docker-compose - builds images locally
+# Usage: docker-compose -f docker-compose.dev.yml up --build
 
 services:
   db:
@@ -12,7 +9,7 @@ services:
     container_name: nomdb-db
     environment:
       POSTGRES_USER: nomdb
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-nomdb_secret}
+      POSTGRES_PASSWORD: nomdb_secret
       POSTGRES_DB: nomdb
     ports:
       - "5432:5432"
@@ -23,27 +20,18 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   backend:
-    image: ghcr.io/your-username/the-nom-database/backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: nomdb-backend
     environment:
-      DATABASE_URL: postgres://nomdb:${DB_PASSWORD:-nomdb_secret}@db:5432/nomdb?sslmode=disable
+      DATABASE_URL: postgres://nomdb:nomdb_secret@db:5432/nomdb?sslmode=disable
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
-      AUTH_MODE: ${AUTH_MODE:-none}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL}
-      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID}
-      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
-      OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-http://localhost:8080/api/auth/oidc/callback}
       DEBUG: ${DEBUG:-false}
       PORT: 8080
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      AUTH_MODE: ${AUTH_MODE:-none}
     ports:
       - "8080:8080"
     volumes:
@@ -60,7 +48,12 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/your-username/the-nom-database/frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     container_name: nomdb-frontend
     ports:
       - "3000:80"
