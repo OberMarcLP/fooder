@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/nomdb/backend/internal/config"
 	"github.com/nomdb/backend/internal/database"
 	"github.com/nomdb/backend/internal/handlers"
 	"github.com/nomdb/backend/internal/logger"
@@ -74,6 +75,12 @@ func main() {
 		logger.Debug("🐛 Debug mode enabled - detailed logging active")
 	}
 
+	// Load and validate configuration
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Fatal("Configuration error: %v", err)
+	}
+
 	// Connect to database
 	if err := database.Connect(); err != nil {
 		logger.Fatal("Failed to connect to database: %v", err)
@@ -99,6 +106,17 @@ func main() {
 		logger.Debug("S3 initialization skipped: %v", err)
 	}
 
+	// Initialize authentication
+	jwtSvc := handlers.InitAuthService()
+
+	// Initialize OIDC (optional)
+	if err := handlers.InitOIDC(); err != nil {
+		logger.Warn("OIDC initialization skipped: %v", err)
+	}
+
+	// Initialize auth middleware
+	middleware.InitAuthMiddleware(jwtSvc)
+
 	// Create router
 	r := mux.NewRouter()
 
@@ -115,54 +133,88 @@ func main() {
 	// API routes
 	api := r.PathPrefix("/api").Subrouter()
 
-	// Categories
-	api.HandleFunc("/categories", handlers.GetCategories).Methods("GET")
-	api.HandleFunc("/categories/{id}", handlers.GetCategory).Methods("GET")
-	api.HandleFunc("/categories", handlers.CreateCategory).Methods("POST")
-	api.HandleFunc("/categories/{id}", handlers.UpdateCategory).Methods("PUT")
-	api.HandleFunc("/categories/{id}", handlers.DeleteCategory).Methods("DELETE")
+	// Public auth routes (no authentication required)
+	api.HandleFunc("/auth/register", handlers.Register).Methods("POST")
+	api.HandleFunc("/auth/login", handlers.Login).Methods("POST")
+	api.HandleFunc("/auth/refresh", handlers.RefreshToken).Methods("POST")
+	api.HandleFunc("/auth/logout", handlers.Logout).Methods("POST")
+	api.HandleFunc("/auth/oidc/login", handlers.OIDCLogin).Methods("GET")
+	api.HandleFunc("/auth/oidc/callback", handlers.OIDCCallback).Methods("GET")
 
-	// Food Types
-	api.HandleFunc("/food-types", handlers.GetFoodTypes).Methods("GET")
-	api.HandleFunc("/food-types/{id}", handlers.GetFoodType).Methods("GET")
-	api.HandleFunc("/food-types", handlers.CreateFoodType).Methods("POST")
-	api.HandleFunc("/food-types/{id}", handlers.UpdateFoodType).Methods("PUT")
-	api.HandleFunc("/food-types/{id}", handlers.DeleteFoodType).Methods("DELETE")
+	// Protected auth routes (authentication required)
+	authRoutes := api.PathPrefix("/auth").Subrouter()
+	authRoutes.Use(middleware.AuthMiddleware)
+	authRoutes.HandleFunc("/me", handlers.GetMe).Methods("GET")
 
-	// Restaurants
-	api.HandleFunc("/restaurants", handlers.GetRestaurants).Methods("GET")
-	api.HandleFunc("/restaurants/paginated", handlers.GetRestaurantsPaginated).Methods("GET")
-	api.HandleFunc("/restaurants/{id}", handlers.GetRestaurant).Methods("GET")
-	api.HandleFunc("/restaurants", handlers.CreateRestaurant).Methods("POST")
-	api.HandleFunc("/restaurants/{id}", handlers.UpdateRestaurant).Methods("PUT")
-	api.HandleFunc("/restaurants/{id}", handlers.DeleteRestaurant).Methods("DELETE")
+	// Public read routes (no auth required for browsing)
+	publicRoutes := api.PathPrefix("").Subrouter()
+	publicRoutes.Use(middleware.OptionalAuthMiddleware)
 
-	// Global Search
-	api.HandleFunc("/search", handlers.GlobalSearch).Methods("GET")
+	// Categories (read-only public, write requires auth)
+	publicRoutes.HandleFunc("/categories", handlers.GetCategories).Methods("GET")
+	publicRoutes.HandleFunc("/categories/{id}", handlers.GetCategory).Methods("GET")
 
-	// Ratings
-	api.HandleFunc("/restaurants/{restaurantId}/ratings", handlers.GetRatings).Methods("GET")
-	api.HandleFunc("/ratings", handlers.CreateRating).Methods("POST")
-	api.HandleFunc("/ratings/{id}", handlers.DeleteRating).Methods("DELETE")
+	categoriesProtected := api.PathPrefix("/categories").Subrouter()
+	categoriesProtected.Use(middleware.AuthMiddleware)
+	categoriesProtected.HandleFunc("", handlers.CreateCategory).Methods("POST")
+	categoriesProtected.HandleFunc("/{id}", handlers.UpdateCategory).Methods("PUT")
+	categoriesProtected.HandleFunc("/{id}", handlers.DeleteCategory).Methods("DELETE")
 
-	// Google Maps
-	api.HandleFunc("/places/search", handlers.SearchPlaces).Methods("GET")
-	api.HandleFunc("/places/{placeId}", handlers.GetPlaceDetails).Methods("GET")
-	api.HandleFunc("/geocode/cities", handlers.GeocodeCities).Methods("GET")
+	// Food Types (read-only public, write requires auth)
+	publicRoutes.HandleFunc("/food-types", handlers.GetFoodTypes).Methods("GET")
+	publicRoutes.HandleFunc("/food-types/{id}", handlers.GetFoodType).Methods("GET")
 
-	// Restaurant Suggestions
-	api.HandleFunc("/suggestions", handlers.GetSuggestions).Methods("GET")
-	api.HandleFunc("/suggestions/{id}", handlers.GetSuggestion).Methods("GET")
-	api.HandleFunc("/suggestions", handlers.CreateSuggestion).Methods("POST")
-	api.HandleFunc("/suggestions/{id}/status", handlers.UpdateSuggestionStatus).Methods("PATCH")
-	api.HandleFunc("/suggestions/{id}/convert", handlers.ConvertSuggestion).Methods("POST")
-	api.HandleFunc("/suggestions/{id}", handlers.DeleteSuggestion).Methods("DELETE")
+	foodTypesProtected := api.PathPrefix("/food-types").Subrouter()
+	foodTypesProtected.Use(middleware.AuthMiddleware)
+	foodTypesProtected.HandleFunc("", handlers.CreateFoodType).Methods("POST")
+	foodTypesProtected.HandleFunc("/{id}", handlers.UpdateFoodType).Methods("PUT")
+	foodTypesProtected.HandleFunc("/{id}", handlers.DeleteFoodType).Methods("DELETE")
 
-	// Menu Photos
-	api.HandleFunc("/restaurants/{restaurantId}/photos", handlers.GetMenuPhotos).Methods("GET")
-	api.HandleFunc("/restaurants/{restaurantId}/photos", handlers.UploadMenuPhoto).Methods("POST")
-	api.HandleFunc("/photos/{id}", handlers.UpdatePhotoCaption).Methods("PATCH")
-	api.HandleFunc("/photos/{id}", handlers.DeleteMenuPhoto).Methods("DELETE")
+	// Restaurants (read-only public, write requires auth)
+	publicRoutes.HandleFunc("/restaurants", handlers.GetRestaurants).Methods("GET")
+	publicRoutes.HandleFunc("/restaurants/paginated", handlers.GetRestaurantsPaginated).Methods("GET")
+	publicRoutes.HandleFunc("/restaurants/{id}", handlers.GetRestaurant).Methods("GET")
+
+	restaurantsProtected := api.PathPrefix("/restaurants").Subrouter()
+	restaurantsProtected.Use(middleware.AuthMiddleware)
+	restaurantsProtected.HandleFunc("", handlers.CreateRestaurant).Methods("POST")
+	restaurantsProtected.HandleFunc("/{id}", handlers.UpdateRestaurant).Methods("PUT")
+	restaurantsProtected.HandleFunc("/{id}", handlers.DeleteRestaurant).Methods("DELETE")
+
+	// Global Search (public)
+	publicRoutes.HandleFunc("/search", handlers.GlobalSearch).Methods("GET")
+
+	// Ratings (read public, write requires auth)
+	publicRoutes.HandleFunc("/restaurants/{restaurantId}/ratings", handlers.GetRatings).Methods("GET")
+
+	ratingsProtected := api.PathPrefix("/ratings").Subrouter()
+	ratingsProtected.Use(middleware.AuthMiddleware)
+	ratingsProtected.HandleFunc("", handlers.CreateRating).Methods("POST")
+	ratingsProtected.HandleFunc("/{id}", handlers.DeleteRating).Methods("DELETE")
+
+	// Google Maps (proxied through backend - public with rate limiting)
+	publicRoutes.HandleFunc("/places/search", handlers.SearchPlaces).Methods("GET")
+	publicRoutes.HandleFunc("/places/{placeId}", handlers.GetPlaceDetails).Methods("GET")
+	publicRoutes.HandleFunc("/geocode/cities", handlers.GeocodeCities).Methods("GET")
+
+	// Restaurant Suggestions (requires auth)
+	suggestionsProtected := api.PathPrefix("/suggestions").Subrouter()
+	suggestionsProtected.Use(middleware.AuthMiddleware)
+	suggestionsProtected.HandleFunc("", handlers.GetSuggestions).Methods("GET")
+	suggestionsProtected.HandleFunc("/{id}", handlers.GetSuggestion).Methods("GET")
+	suggestionsProtected.HandleFunc("", handlers.CreateSuggestion).Methods("POST")
+	suggestionsProtected.HandleFunc("/{id}/status", handlers.UpdateSuggestionStatus).Methods("PATCH")
+	suggestionsProtected.HandleFunc("/{id}/convert", handlers.ConvertSuggestion).Methods("POST")
+	suggestionsProtected.HandleFunc("/{id}", handlers.DeleteSuggestion).Methods("DELETE")
+
+	// Menu Photos (read public, write requires auth)
+	publicRoutes.HandleFunc("/restaurants/{restaurantId}/photos", handlers.GetMenuPhotos).Methods("GET")
+
+	photosProtected := api.PathPrefix("").Subrouter()
+	photosProtected.Use(middleware.AuthMiddleware)
+	photosProtected.HandleFunc("/restaurants/{restaurantId}/photos", handlers.UploadMenuPhoto).Methods("POST")
+	photosProtected.HandleFunc("/photos/{id}", handlers.UpdatePhotoCaption).Methods("PATCH")
+	photosProtected.HandleFunc("/photos/{id}", handlers.DeleteMenuPhoto).Methods("DELETE")
 
 	// Health check (support both GET and HEAD for Docker healthcheck)
 	api.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -204,19 +256,14 @@ func main() {
 	logger.Info("🔒 Rate limiting enabled: 100 req/min per IP, burst: 20")
 
 	// CORS middleware - more restrictive configuration
-	allowedOrigins := []string{"http://localhost:3000", "http://localhost:5173"}
-	if envOrigins := os.Getenv("ALLOWED_ORIGINS"); envOrigins != "" {
-		// In production, set ALLOWED_ORIGINS to your actual domain
-		allowedOrigins = []string{envOrigins}
-	}
 	c := cors.New(cors.Options{
-		AllowedOrigins:   allowedOrigins,
+		AllowedOrigins:   cfg.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Requested-With"},
 		AllowCredentials: true,
 		MaxAge:           300, // Cache preflight for 5 minutes
 	})
-	logger.Info("🌐 CORS configured for origins: %v", allowedOrigins)
+	logger.Info("🌐 CORS configured for origins: %v", cfg.AllowedOrigins)
 
 	// Apply middleware chain (order matters)
 	// Recovery -> RequestID -> Security headers -> Rate limiting -> Request validation -> Max bytes -> Sanitization -> Compression -> Logging -> CORS -> Router
@@ -242,6 +289,7 @@ func main() {
 	logger.Info("📚 Swagger UI available at http://localhost:%s/api/docs", port)
 	logger.Info("🛡️  Security features enabled:")
 	logger.Info("   ✓ Panic recovery and error handling")
+	logger.Info("   ✓ Authentication mode: %s", cfg.AuthMode)
 	logger.Info("   ✓ Rate limiting (100 req/min per IP)")
 	logger.Info("   ✓ Request size limits (10MB max)")
 	logger.Info("   ✓ Content-Type validation")

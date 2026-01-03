@@ -1,0 +1,155 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.0.0] - 2025-01-03
+
+### Added
+
+#### Authentication & Security
+- Multi-mode authentication system (none/local/oauth/both)
+- JWT token-based authentication with Argon2id password hashing
+- Generic OIDC integration supporting Authentik, Keycloak, Auth0, Okta, and other providers
+- Configurable authentication modes via AUTH_MODE environment variable
+- Session management with refresh tokens
+- Rate limiting (100 req/min per IP)
+- Security headers (XSS, clickjacking, MIME sniffing protection)
+- Input sanitization and validation
+- Request size limits (10MB max)
+
+#### Core Features
+- Restaurant management (CRUD operations)
+- Multi-dimensional rating system (food, service, ambiance)
+- Google Maps integration for restaurant search
+- Embedded maps showing restaurant locations
+- Get directions to restaurants
+- Restaurant suggestion workflow (pending, approved, tested, rejected)
+- Menu photo uploads (AWS S3 or local storage)
+- Cultural category management
+- Food type management
+- Dark/Light theme toggle
+
+#### Infrastructure & DevOps
+- Docker Compose setup for local development
+- Production Docker Compose configuration
+- Nginx reverse proxy with SSL/TLS support
+- Automated Docker image publishing to GitHub Container Registry
+- Multi-platform support (linux/amd64, linux/arm64)
+- GitHub Actions CI/CD pipeline
+- Automated release workflow with binary builds
+- GitHub Pages documentation site
+- Comprehensive deployment scripts (deploy.sh, backup.sh, restore.sh)
+
+#### Monitoring & Logging
+- Structured logging with zerolog
+- Request tracing with UUID correlation
+- Real-time metrics tracking
+- Performance monitoring (p50, p95, p99)
+- Health check endpoints
+- Swagger/OpenAPI documentation
+
+#### Documentation
+- Complete deployment guide (DEPLOYMENT.md)
+- Quick start guide (QUICKSTART_PRODUCTION.md)
+- Production checklist (PRODUCTION_CHECKLIST.md)
+- Deployment summary (DEPLOYMENT_SUMMARY.md)
+- Authentication setup guide (AUTHENTICATION.md)
+- Git workflow guide (GIT_WORKFLOW.md)
+- Contributing guidelines (CONTRIBUTING.md)
+- GitHub setup guide (GITHUB_SETUP.md)
+- Automated documentation deployment via GitHub Pages
+
+#### Database
+- PostgreSQL 16 with health checks
+- Database migrations support
+- Users and sessions tables
+- Optimized indexes
+- Connection pooling
+
+#### Testing
+- Comprehensive test suite
+- GitHub Actions CI with automated testing
+- Security scanning with Trivy
+- Code coverage reporting
+- Linting for Go and TypeScript
+
+### Technical Stack
+
+#### Backend
+- Go 1.24
+- Gorilla Mux router
+- pgx/v5 PostgreSQL driver
+- coreos/go-oidc/v3 for OIDC
+- AWS SDK v2 for S3
+- rs/cors for CORS handling
+- zerolog for structured logging
+
+#### Frontend
+- React 18
+- TypeScript
+- Vite build tool
+- Tailwind CSS
+- Google Maps JavaScript API integration
+
+#### Infrastructure
+- Docker and Docker Compose
+- Nginx for reverse proxy
+- PostgreSQL 16
+- GitHub Actions for CI/CD
+- GitHub Container Registry for Docker images
+- GitHub Pages for documentation
+
+### Configuration
+
+#### Environment Variables
+- `AUTH_MODE` - Authentication mode (none/local/oauth/both)
+- `JWT_SECRET_KEY` - Secret key for JWT signing
+- `OIDC_ISSUER_URL` - OIDC provider issuer URL
+- `OIDC_CLIENT_ID` - OIDC client identifier
+- `OIDC_CLIENT_SECRET` - OIDC client secret
+- `OIDC_REDIRECT_URL` - OIDC redirect URL
+- `DATABASE_URL` - PostgreSQL connection string
+- `GOOGLE_MAPS_API_KEY` - Google Maps API key
+- `AWS_ACCESS_KEY_ID` - AWS access key (optional)
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key (optional)
+- `S3_BUCKET_NAME` - S3 bucket name (optional)
+- `ALLOWED_ORIGINS` - CORS allowed origins
+- `DEBUG` - Enable debug logging
+
+### Breaking Changes
+- Replaced Google OAuth with generic OIDC (requires OIDC_* environment variables instead of GOOGLE_OAUTH_*)
+- AUTH_MODE now defaults to "none" for backward compatibility
+
+### Security
+- All passwords hashed with Argon2id (64MB memory, 3 iterations, parallelism 2)
+- JWT tokens signed with HS256
+- Access tokens expire in 15 minutes
+- Refresh tokens expire in 7 days
+- Rate limiting on all endpoints
+- Security headers enabled
+- HTTPS enforced in production
+
+### Docker Images
+- Pre-built images available at `ghcr.io/your-username/the-nom-database/backend`
+- Pre-built images available at `ghcr.io/your-username/the-nom-database/frontend`
+- Multi-platform support (amd64, arm64)
+- Automatic tagging with version, latest, develop, and SHA
+
+## [0.1.0] - Initial Development
+
+### Added
+- Basic restaurant management
+- Simple rating system
+- Google Maps integration
+- Docker development environment
+
+---
+
+[Unreleased]: https://github.com/your-username/the-nom-database/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/your-username/the-nom-database/releases/tag/v1.0.0
+[0.1.0]: https://github.com/your-username/the-nom-database/releases/tag/v0.1.0

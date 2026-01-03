@@ -1,6 +1,43 @@
 # The Nom Database - Restaurant Rating App
 
-A production-ready, full-stack restaurant rating application with Google Maps integration, comprehensive monitoring, and automated testing.
+[![CI](https://github.com/your-username/the-nom-database/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/the-nom-database/actions/workflows/ci.yml)
+[![Docker](https://github.com/your-username/the-nom-database/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/your-username/the-nom-database/actions/workflows/docker-publish.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://your-username.github.io/the-nom-database)
+
+A production-ready, full-stack restaurant rating application with Google Maps integration, multi-mode authentication (local/OIDC), and automated Docker image publishing.
+
+## 📚 Documentation
+
+- **[Full Documentation](https://your-username.github.io/the-nom-database)** - Complete guides and API reference
+- **[Quick Start](docs/QUICKSTART_PRODUCTION.md)** - Deploy in 5 minutes
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Comprehensive production deployment
+- **[Authentication](docs/AUTHENTICATION.md)** - Setup local auth or OIDC (Authentik, Keycloak, etc.)
+- **[Git Workflow](docs/GIT_WORKFLOW.md)** - Branching strategy and release process
+- **[Contributing](docs/CONTRIBUTING.md)** - How to contribute
+
+## 🚀 Quick Start with Docker
+
+### Using Pre-built Images (Recommended)
+
+```bash
+# Pull latest images
+docker pull ghcr.io/your-username/the-nom-database/backend:latest
+docker pull ghcr.io/your-username/the-nom-database/frontend:latest
+
+# Or use docker-compose
+docker compose up -d
+```
+
+### Building Locally
+
+```bash
+git clone https://github.com/your-username/the-nom-database.git
+cd the-nom-database
+docker compose up -d
+```
+
+Access the application at **http://localhost:3000**
 
 ## Tech Stack
 
