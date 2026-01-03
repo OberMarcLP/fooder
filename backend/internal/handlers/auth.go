@@ -131,7 +131,9 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Failed to encode response: %v", err)
+	}
 }
 // @Summary Login
 // @Description Login with email and password
@@ -216,7 +218,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	logger.Info("User logged in: %s (ID: %d)", user.Email, user.ID)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Failed to encode response: %v", err)
+	}
 }
 
 // @Summary Refresh token
@@ -264,7 +268,9 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	// Check if expired
 	if session.ExpiresAt.Before(time.Now()) {
 		// Delete expired session
-		database.GetPool().Exec(ctx, "DELETE FROM sessions WHERE id = $1", session.ID)
+		if _, err := database.GetPool().Exec(ctx, "DELETE FROM sessions WHERE id = $1", session.ID); err != nil {
+			logger.Warn("Failed to delete expired session: %v", err)
+		}
 		http.Error(w, "Refresh token expired", http.StatusUnauthorized)
 		return
 	}
@@ -313,7 +319,9 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Failed to encode response: %v", err)
+	}
 }
 
 // @Summary Logout

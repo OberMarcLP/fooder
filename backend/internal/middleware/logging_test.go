@@ -88,7 +88,7 @@ func TestLoggingMiddleware(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("test response"))
+		_, _ = w.Write([]byte("test response"))
 	})
 
 	// Wrap with both RequestIDMiddleware and LoggingMiddleware
@@ -149,7 +149,7 @@ func TestLoggingMiddleware_CapturesResponseData(t *testing.T) {
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(expectedStatus)
-		w.Write([]byte(responseBody))
+		_, _ = w.Write([]byte(responseBody))
 	})
 
 	// Wrap with LoggingMiddleware and RequestIDMiddleware
@@ -271,9 +271,9 @@ func TestResponseWriter_MultipleWrites(t *testing.T) {
 	chunk2 := []byte("second ")
 	chunk3 := []byte("third")
 
-	rw.Write(chunk1)
-	rw.Write(chunk2)
-	rw.Write(chunk3)
+	_, _ = rw.Write(chunk1)
+	_, _ = rw.Write(chunk2)
+	_, _ = rw.Write(chunk3)
 
 	// Verify total bytes
 	expectedBytes := int64(len(chunk1) + len(chunk2) + len(chunk3))
@@ -338,7 +338,7 @@ func BenchmarkRequestIDMiddleware(b *testing.B) {
 
 func BenchmarkLoggingMiddleware(b *testing.B) {
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("test response"))
+		_, _ = w.Write([]byte("test response"))
 	})
 
 	handler := RequestIDMiddleware(LoggingMiddleware(testHandler))

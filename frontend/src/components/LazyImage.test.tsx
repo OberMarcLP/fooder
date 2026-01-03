@@ -30,7 +30,7 @@ describe('LazyImage', () => {
 
   it('renders an image', () => {
     render(<LazyImage src="test.jpg" alt="Test image" />);
-    const img = screen.getByAlt('Test image');
+    const img = screen.getByRole('img', { name: 'Test image' });
     expect(img).toBeInTheDocument();
   });
 
@@ -42,7 +42,7 @@ describe('LazyImage', () => {
 
   it('applies className prop', () => {
     render(<LazyImage src="test.jpg" alt="Test image" className="custom-class" />);
-    const img = screen.getByAlt('Test image');
+    const img = screen.getByRole('img', { name: 'Test image' });
     expect(img).toHaveClass('custom-class');
   });
 
@@ -50,7 +50,7 @@ describe('LazyImage', () => {
     const handleError = vi.fn();
     render(<LazyImage src="invalid.jpg" alt="Test image" onError={handleError} />);
 
-    const img = screen.getByAlt('Test image');
+    const img = screen.getByRole('img', { name: 'Test image' });
     const event = new Event('error');
     img.dispatchEvent(event);
 
@@ -58,10 +58,10 @@ describe('LazyImage', () => {
   });
 
   it('loads image when in viewport', async () => {
-    const { container } = render(<LazyImage src="test.jpg" alt="Test image" />);
+    render(<LazyImage src="test.jpg" alt="Test image" />);
 
     await waitFor(() => {
-      const img = screen.getByAlt('Test image');
+      const img = screen.getByRole('img', { name: 'Test image' });
       expect(img).toHaveAttribute('src', 'test.jpg');
     });
   });
