@@ -349,7 +349,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Logged out successfully"))
+	_, _ = w.Write([]byte("Logged out successfully"))
 }
 
 // @Summary Get current user
@@ -363,7 +363,9 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 func GetMe(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(models.UserContextKey).(*models.User)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		logger.Error("Failed to encode response: %v", err)
+	}
 }
 
 // Helper functions

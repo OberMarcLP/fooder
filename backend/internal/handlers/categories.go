@@ -40,7 +40,9 @@ func GetCategories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(categories)
+	if err := json.NewEncoder(w).Encode(categories); err != nil {
+		logger.Error("Failed to encode response: %v", err)
+	}
 }
 
 // GetCategory godoc
@@ -72,7 +74,9 @@ func GetCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(c)
+	if err := json.NewEncoder(w).Encode(c); err != nil {
+		logger.Error("Failed to encode response: %v", err)
+	}
 }
 
 // CreateCategory godoc

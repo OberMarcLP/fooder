@@ -27,7 +27,9 @@ const (
 
 func init() {
 	// Create uploads directory if it doesn't exist (fallback for local storage)
-	os.MkdirAll(uploadsDir, 0755)
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		logger.Warn("Failed to create uploads directory: %v", err)
+	}
 }
 
 // @Summary Get menu photos for a restaurant
@@ -210,7 +212,9 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 
 		// Save thumbnail
 		thumbnailDir := filepath.Join(uploadsDir, thumbnailsSubdir)
-		os.MkdirAll(thumbnailDir, 0755) // Ensure thumbnail directory exists
+		if err := os.MkdirAll(thumbnailDir, 0755); err != nil {
+			logger.Warn("Failed to create thumbnail directory: %v", err)
+		}
 		thumbnailPath := filepath.Join(thumbnailDir, thumbnailFilename)
 		if err := os.WriteFile(thumbnailPath, thumbnail, 0644); err != nil {
 			http.Error(w, "Failed to save thumbnail", http.StatusInternalServerError)
@@ -234,9 +238,13 @@ func UploadMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Clean up uploaded file on database error
 		if s3Service != nil {
-			s3Service.DeleteFile(ctx, fmt.Sprintf("menu_photos/%s", filename))
+			if delErr := s3Service.DeleteFile(ctx, fmt.Sprintf("menu_photos/%s", filename)); delErr != nil {
+				logger.Warn("Failed to delete file after database error: %v", delErr)
+			}
 		} else {
-			os.Remove(filepath.Join(uploadsDir, filename))
+			if delErr := os.Remove(filepath.Join(uploadsDir, filename)); delErr != nil {
+				logger.Warn("Failed to delete file after database error: %v", delErr)
+			}
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -352,11 +360,15 @@ func DeleteMenuPhoto(w http.ResponseWriter, r *http.Request) {
 	s3Service := services.GetS3Service()
 	if s3Service != nil {
 		// Delete from S3
-		s3Service.DeleteFile(ctx, fmt.Sprintf("menu_photos/%s", filename))
+		if delErr := s3Service.DeleteFile(ctx, fmt.Sprintf("menu_photos/%s", filename)); delErr != nil {
+			logger.Warn("Failed to delete file from S3: %v", delErr)
+		}
 	} else {
 		// Delete from local disk
 		filePath := filepath.Join(uploadsDir, filename)
-		os.Remove(filePath)
+		if delErr := os.Remove(filePath); delErr != nil {
+			logger.Warn("Failed to delete file from disk: %v", delErr)
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)

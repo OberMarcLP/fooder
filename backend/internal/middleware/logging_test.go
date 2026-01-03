@@ -363,6 +363,6 @@ func BenchmarkResponseWriter_Write(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		rw.Write(testData)
+		_, _ = rw.Write(testData)
 	}
 }

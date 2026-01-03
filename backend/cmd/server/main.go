@@ -220,7 +220,7 @@ func main() {
 	api.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if r.Method == "GET" {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		}
 	}).Methods("GET", "HEAD")
 
