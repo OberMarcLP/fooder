@@ -426,25 +426,12 @@ func generateLoginResponseWithService(ctx context.Context, user *models.User, r 
 
 func isValidEmail(email string) bool {
 	// Basic email validation - you might want to use a more robust library
-	return len(email) > 3 && contains(email, "@") && contains(email, ".")
-}
-
-func contains(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && indexOfString(s, substr) >= 0
-}
-
-func indexOfString(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	return len(email) > 3 && strings.Contains(email, "@") && strings.Contains(email, ".")
 }
 
 func isDuplicateKeyError(err error) bool {
 	// Check for PostgreSQL duplicate key error
-	return err != nil && (contains(err.Error(), "duplicate key") || contains(err.Error(), "unique constraint"))
+	return err != nil && (strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint"))
 }
 
 // GetUserFromContext extracts user from request context
