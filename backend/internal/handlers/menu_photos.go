@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/nomdb/backend/internal/database"
+	"github.com/nomdb/backend/internal/logger"
 	"github.com/nomdb/backend/internal/models"
 	"github.com/nomdb/backend/internal/services"
 )
