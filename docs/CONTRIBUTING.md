@@ -424,7 +424,7 @@ Contributors are recognized in:
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the BSD 3-Clause License.
 
 ## Thank You!
 
